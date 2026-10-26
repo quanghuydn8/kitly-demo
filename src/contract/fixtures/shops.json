@@ -1,0 +1,50 @@
+[
+  {
+    "id": "shop-minhan",
+    "name": "Minh An Stationery",
+    "tier": "preferred",
+    "rating": 4.8,
+    "shipFee": 25000,
+    "city": "Hanoi"
+  },
+  {
+    "id": "shop-kidzone",
+    "name": "KidZone Mall",
+    "tier": "mall",
+    "rating": 4.9,
+    "shipFee": 30000,
+    "city": "HCMC"
+  },
+  {
+    "id": "shop-bago",
+    "name": "Bago Bags",
+    "tier": "regular",
+    "rating": 4.3,
+    "shipFee": 15000,
+    "city": "Da Nang"
+  },
+  {
+    "id": "shop-homie",
+    "name": "Homie Living",
+    "tier": "preferred",
+    "rating": 4.7,
+    "shipFee": 22000,
+    "city": "HCMC"
+  },
+  {
+    "id": "shop-trailhead",
+    "name": "Trailhead Outdoor",
+    "tier": "mall",
+    "rating": 4.8,
+    "shipFee": 35000,
+    "city": "Hanoi"
+  },
+  {
+    "id": "shop-deskpro",
+    "name": "DeskPro",
+    "tier": "preferred",
+    "rating": 4.6,
+    "shipFee": 28000,
+    "city": "HCMC"
+  }
+]

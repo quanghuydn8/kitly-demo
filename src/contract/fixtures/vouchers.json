@@ -1,0 +1,57 @@
+[
+  {
+    "id": "v-kitly50",
+    "scope": "platform",
+    "shopId": null,
+    "code": "KITLY50",
+    "kind": "fixed",
+    "value": 50000,
+    "maxDiscount": null,
+    "minSpend": 1000000,
+    "validUntil": "2026-09-30"
+  },
+  {
+    "id": "v-freeship",
+    "scope": "platform",
+    "shopId": null,
+    "code": "FREESHIP",
+    "kind": "freeship",
+    "value": 30000,
+    "maxDiscount": null,
+    "minSpend": 200000,
+    "validUntil": "2026-09-30"
+  },
+  {
+    "id": "v-save5",
+    "scope": "platform",
+    "shopId": null,
+    "code": "SAVE5",
+    "kind": "percent",
+    "value": 5,
+    "maxDiscount": 40000,
+    "minSpend": 500000,
+    "validUntil": "2026-09-30"
+  },
+  {
+    "id": "v-minhan30",
+    "scope": "shop",
+    "shopId": "shop-minhan",
+    "code": "MINHAN30",
+    "kind": "fixed",
+    "value": 30000,
+    "maxDiscount": null,
+    "minSpend": 300000,
+    "validUntil": "2026-09-30"
+  },
+  {
+    "id": "v-kidzone10",
+    "scope": "shop",
+    "shopId": "shop-kidzone",
+    "code": "KIDZONE10",
+    "kind": "percent",
+    "value": 10,
+    "maxDiscount": 50000,
+    "minSpend": 400000,
+    "validUntil": "2026-09-30"
+  }
+]

@@ -1,0 +1,797 @@
+[
+  {
+    "event": "step",
+    "data": {
+      "id": "understand",
+      "status": "running"
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "understand",
+      "status": "done",
+      "detail": "Back to school · budget 1,500,000₫ · by Aug 25"
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "plan",
+      "status": "running"
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "plan",
+      "status": "done",
+      "detail": "Planned 9 items"
+    }
+  },
+  {
+    "event": "plan",
+    "data": {
+      "sessionId": "9b6f1c1e-2c4a-4d1e-9a51-7f3c2b8d0a01",
+      "plan": {
+        "event": "back_to_school",
+        "language": "en",
+        "budget": 1500000,
+        "deadline": "2026-08-25",
+        "items": [
+          {
+            "key": "backpack",
+            "needLabel": "Anti-hunchback backpack",
+            "category": "school-backpack",
+            "required": true,
+            "quantity": 1,
+            "mustHaveTags": [
+              "anti-hunchback"
+            ],
+            "niceToHaveTags": [
+              "lightweight"
+            ],
+            "maxUnitPrice": 400000
+          },
+          {
+            "key": "notebooks",
+            "needLabel": "Grade 1 notebooks",
+            "category": "notebooks",
+            "required": true,
+            "quantity": 1,
+            "mustHaveTags": [
+              "grade-1"
+            ],
+            "niceToHaveTags": [],
+            "maxUnitPrice": null
+          },
+          {
+            "key": "pencils",
+            "needLabel": "Pencils and pens",
+            "category": "pencils-pens",
+            "required": true,
+            "quantity": 1,
+            "mustHaveTags": [],
+            "niceToHaveTags": [
+              "grade-1"
+            ],
+            "maxUnitPrice": null
+          },
+          {
+            "key": "pencil-case",
+            "needLabel": "Pencil case",
+            "category": "pencil-case",
+            "required": true,
+            "quantity": 1,
+            "mustHaveTags": [],
+            "niceToHaveTags": [],
+            "maxUnitPrice": null
+          },
+          {
+            "key": "water-bottle",
+            "needLabel": "Leak-proof water bottle",
+            "category": "water-bottle",
+            "required": true,
+            "quantity": 1,
+            "mustHaveTags": [
+              "leak-proof"
+            ],
+            "niceToHaveTags": [
+              "bpa-free"
+            ],
+            "maxUnitPrice": null
+          },
+          {
+            "key": "lunch-box",
+            "needLabel": "Lunch box",
+            "category": "lunch-box",
+            "required": false,
+            "quantity": 1,
+            "mustHaveTags": [],
+            "niceToHaveTags": [
+              "bpa-free"
+            ],
+            "maxUnitPrice": null
+          },
+          {
+            "key": "shoes",
+            "needLabel": "School shoes",
+            "category": "school-shoes",
+            "required": true,
+            "quantity": 1,
+            "mustHaveTags": [],
+            "niceToHaveTags": [
+              "non-slip"
+            ],
+            "maxUnitPrice": null
+          },
+          {
+            "key": "uniform",
+            "needLabel": "Uniform shirts",
+            "category": "uniform-shirt",
+            "required": true,
+            "quantity": 2,
+            "mustHaveTags": [],
+            "niceToHaveTags": [],
+            "maxUnitPrice": null
+          },
+          {
+            "key": "crayons",
+            "needLabel": "Crayons",
+            "category": "crayons-paints",
+            "required": false,
+            "quantity": 1,
+            "mustHaveTags": [],
+            "niceToHaveTags": [
+              "kids"
+            ],
+            "maxUnitPrice": null
+          }
+        ],
+        "assumptions": [
+          "Assumed 1 child starting Grade 1",
+          "Assumed 2 uniform shirts for the week",
+          "Deadline read as 2026-08-25"
+        ]
+      }
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "search",
+      "status": "running"
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "search",
+      "status": "done",
+      "detail": "Compared 24 products from 4 shops"
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "optimize",
+      "status": "running"
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "optimize",
+      "status": "done",
+      "detail": "Optimized: 1.000.000₫ across 2 shops"
+    }
+  },
+  {
+    "event": "options",
+    "data": {
+      "options": [
+        {
+          "profile": "balanced",
+          "status": "ok",
+          "lines": [
+            {
+              "itemKey": "notebooks",
+              "product": {
+                "id": "prod-minhan-notebooks",
+                "shopId": "shop-minhan",
+                "title": "Minh An Grade 1 Notebook Pack 10 Books",
+                "category": "notebooks",
+                "description": "Ten 96-page notebooks with 4-line handwriting grid used in Vietnamese primary schools. 100 gsm paper, no bleed-through.",
+                "price": 85000,
+                "rating": 4.8,
+                "reviewCount": 2110,
+                "soldCount": 15400,
+                "stock": 400,
+                "tags": [
+                  "grade-1",
+                  "kids"
+                ],
+                "attributes": {
+                  "pages": "96",
+                  "count": "10"
+                },
+                "shipDaysMin": 1,
+                "shipDaysMax": 3,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-minhan",
+                "name": "Minh An Stationery",
+                "tier": "preferred",
+                "rating": 4.8,
+                "shipFee": 25000,
+                "city": "Hanoi"
+              },
+              "quantity": 1,
+              "lineTotal": 85000,
+              "reason": "Grade 1 grid, best value, arrives Aug 23",
+              "alternatives": [
+                {
+                  "product": {
+                    "id": "prod-kidzone-notebooks",
+                    "shopId": "shop-kidzone",
+                    "title": "KidZone Premium Notebook Set 10 Pcs",
+                    "category": "notebooks",
+                    "description": "Premium 120 gsm notebooks with laminated covers. 4-line grid, 80 pages each.",
+                    "price": 140000,
+                    "rating": 4.9,
+                    "reviewCount": 820,
+                    "soldCount": 4100,
+                    "stock": 250,
+                    "tags": [
+                      "grade-1",
+                      "premium"
+                    ],
+                    "attributes": {
+                      "pages": "80",
+                      "count": "10"
+                    },
+                    "shipDaysMin": 2,
+                    "shipDaysMax": 4,
+                    "updatedForDemandAt": null
+                  },
+                  "shop": {
+                    "id": "shop-kidzone",
+                    "name": "KidZone Mall",
+                    "tier": "mall",
+                    "rating": 4.9,
+                    "shipFee": 30000,
+                    "city": "HCMC"
+                  },
+                  "score": 0.81,
+                  "matchedTags": [
+                    "grade-1"
+                  ],
+                  "arrivesBy": "2026-08-24"
+                }
+              ]
+            },
+            {
+              "itemKey": "pencils",
+              "product": {
+                "id": "prod-minhan-pencils",
+                "shopId": "shop-minhan",
+                "title": "Minh An HB Pencil & Pen Starter Set 24 Pcs",
+                "category": "pencils-pens",
+                "description": "12 HB pencils, 6 gel pens, 4 erasers and 2 sharpeners. Triangular grip for first writers.",
+                "price": 65000,
+                "rating": 4.7,
+                "reviewCount": 1540,
+                "soldCount": 9800,
+                "stock": 380,
+                "tags": [
+                  "kids",
+                  "grade-1"
+                ],
+                "attributes": {
+                  "count": "24"
+                },
+                "shipDaysMin": 1,
+                "shipDaysMax": 3,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-minhan",
+                "name": "Minh An Stationery",
+                "tier": "preferred",
+                "rating": 4.8,
+                "shipFee": 25000,
+                "city": "Hanoi"
+              },
+              "quantity": 1,
+              "lineTotal": 65000,
+              "reason": "Starter set with triangular grip, same shop as notebooks",
+              "alternatives": [
+                {
+                  "product": {
+                    "id": "prod-kidzone-pens",
+                    "shopId": "shop-kidzone",
+                    "title": "KidZone Ergonomic Writing Set",
+                    "category": "pencils-pens",
+                    "description": "Ergonomic-grip pencils and erasable pens for beginners. Includes 2 refills.",
+                    "price": 120000,
+                    "rating": 4.8,
+                    "reviewCount": 410,
+                    "soldCount": 1700,
+                    "stock": 200,
+                    "tags": [
+                      "ergonomic",
+                      "kids"
+                    ],
+                    "attributes": {
+                      "count": "10"
+                    },
+                    "shipDaysMin": 2,
+                    "shipDaysMax": 4,
+                    "updatedForDemandAt": null
+                  },
+                  "shop": {
+                    "id": "shop-kidzone",
+                    "name": "KidZone Mall",
+                    "tier": "mall",
+                    "rating": 4.9,
+                    "shipFee": 30000,
+                    "city": "HCMC"
+                  },
+                  "score": 0.74,
+                  "matchedTags": [],
+                  "arrivesBy": "2026-08-24"
+                }
+              ]
+            },
+            {
+              "itemKey": "pencil-case",
+              "product": {
+                "id": "prod-minhan-pencil-case",
+                "shopId": "shop-minhan",
+                "title": "Minh An Double-Layer Pencil Case",
+                "category": "pencil-case",
+                "description": "Two zip layers, elastic pen loops and a built-in ruler. Wipe-clean fabric.",
+                "price": 79000,
+                "rating": 4.7,
+                "reviewCount": 960,
+                "soldCount": 5300,
+                "stock": 220,
+                "tags": [
+                  "kids"
+                ],
+                "attributes": {
+                  "material": "nylon"
+                },
+                "shipDaysMin": 1,
+                "shipDaysMax": 3,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-minhan",
+                "name": "Minh An Stationery",
+                "tier": "preferred",
+                "rating": 4.8,
+                "shipFee": 25000,
+                "city": "Hanoi"
+              },
+              "quantity": 1,
+              "lineTotal": 79000,
+              "reason": "Top rated pencil case, arrives Aug 23",
+              "alternatives": []
+            },
+            {
+              "itemKey": "water-bottle",
+              "product": {
+                "id": "prod-minhan-bottle",
+                "shopId": "shop-minhan",
+                "title": "Minh An Leak-Proof Kids Water Bottle 500ml",
+                "category": "water-bottle",
+                "description": "BPA-free Tritan bottle with flip straw and lock. 500 ml, dishwasher safe.",
+                "price": 99000,
+                "rating": 4.7,
+                "reviewCount": 1320,
+                "soldCount": 7800,
+                "stock": 260,
+                "tags": [
+                  "bpa-free",
+                  "leak-proof",
+                  "kids"
+                ],
+                "attributes": {
+                  "volume": "500 ml"
+                },
+                "shipDaysMin": 1,
+                "shipDaysMax": 3,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-minhan",
+                "name": "Minh An Stationery",
+                "tier": "preferred",
+                "rating": 4.8,
+                "shipFee": 25000,
+                "city": "Hanoi"
+              },
+              "quantity": 1,
+              "lineTotal": 99000,
+              "reason": "Leak-proof and BPA-free under 100k",
+              "alternatives": [
+                {
+                  "product": {
+                    "id": "prod-kidzone-bottle",
+                    "shopId": "shop-kidzone",
+                    "title": "KidZone Insulated Steel Bottle 450ml",
+                    "category": "water-bottle",
+                    "description": "Double-wall stainless steel keeps water cold for 12 hours. Leak-proof straw lid.",
+                    "price": 210000,
+                    "rating": 4.9,
+                    "reviewCount": 640,
+                    "soldCount": 2600,
+                    "stock": 140,
+                    "tags": [
+                      "insulated",
+                      "leak-proof",
+                      "bpa-free",
+                      "kids"
+                    ],
+                    "attributes": {
+                      "volume": "450 ml"
+                    },
+                    "shipDaysMin": 2,
+                    "shipDaysMax": 4,
+                    "updatedForDemandAt": null
+                  },
+                  "shop": {
+                    "id": "shop-kidzone",
+                    "name": "KidZone Mall",
+                    "tier": "mall",
+                    "rating": 4.9,
+                    "shipFee": 30000,
+                    "city": "HCMC"
+                  },
+                  "score": 0.84,
+                  "matchedTags": [
+                    "leak-proof",
+                    "bpa-free"
+                  ],
+                  "arrivesBy": "2026-08-24"
+                }
+              ]
+            },
+            {
+              "itemKey": "lunch-box",
+              "product": {
+                "id": "prod-minhan-lunchbox",
+                "shopId": "shop-minhan",
+                "title": "Minh An 3-Compartment Lunch Box",
+                "category": "lunch-box",
+                "description": "Three-compartment lunch box with spoon and fork. BPA-free PP, microwave safe, leak-proof seal.",
+                "price": 119000,
+                "rating": 4.6,
+                "reviewCount": 880,
+                "soldCount": 4400,
+                "stock": 190,
+                "tags": [
+                  "bpa-free",
+                  "leak-proof",
+                  "kids"
+                ],
+                "attributes": {
+                  "compartments": "3"
+                },
+                "shipDaysMin": 1,
+                "shipDaysMax": 3,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-minhan",
+                "name": "Minh An Stationery",
+                "tier": "preferred",
+                "rating": 4.8,
+                "shipFee": 25000,
+                "city": "Hanoi"
+              },
+              "quantity": 1,
+              "lineTotal": 119000,
+              "reason": "BPA-free, consolidates with Minh An order",
+              "alternatives": [
+                {
+                  "product": {
+                    "id": "prod-kidzone-lunchbox",
+                    "shopId": "shop-kidzone",
+                    "title": "KidZone Thermal Bento Box",
+                    "category": "lunch-box",
+                    "description": "Insulated stainless bento that keeps food warm for 5 hours. Includes carry bag.",
+                    "price": 260000,
+                    "rating": 4.8,
+                    "reviewCount": 390,
+                    "soldCount": 1500,
+                    "stock": 110,
+                    "tags": [
+                      "insulated",
+                      "bpa-free",
+                      "kids"
+                    ],
+                    "attributes": {
+                      "compartments": "2"
+                    },
+                    "shipDaysMin": 2,
+                    "shipDaysMax": 4,
+                    "updatedForDemandAt": null
+                  },
+                  "shop": {
+                    "id": "shop-kidzone",
+                    "name": "KidZone Mall",
+                    "tier": "mall",
+                    "rating": 4.9,
+                    "shipFee": 30000,
+                    "city": "HCMC"
+                  },
+                  "score": 0.78,
+                  "matchedTags": [
+                    "bpa-free"
+                  ],
+                  "arrivesBy": "2026-08-24"
+                }
+              ]
+            },
+            {
+              "itemKey": "shoes",
+              "product": {
+                "id": "prod-kidzone-shoes",
+                "shopId": "shop-kidzone",
+                "title": "KidZone White School Sneakers",
+                "category": "school-shoes",
+                "description": "White canvas sneakers with non-slip rubber sole and velcro straps. Sizes 28–35.",
+                "price": 320000,
+                "rating": 4.8,
+                "reviewCount": 720,
+                "soldCount": 3300,
+                "stock": 160,
+                "tags": [
+                  "non-slip",
+                  "kids"
+                ],
+                "attributes": {
+                  "sizes": "28-35"
+                },
+                "shipDaysMin": 2,
+                "shipDaysMax": 4,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-kidzone",
+                "name": "KidZone Mall",
+                "tier": "mall",
+                "rating": 4.9,
+                "shipFee": 30000,
+                "city": "HCMC"
+              },
+              "quantity": 1,
+              "lineTotal": 320000,
+              "reason": "Non-slip sole, only option arriving by Aug 25",
+              "alternatives": []
+            },
+            {
+              "itemKey": "uniform",
+              "product": {
+                "id": "prod-minhan-uniform",
+                "shopId": "shop-minhan",
+                "title": "Minh An Primary Uniform Shirt White",
+                "category": "uniform-shirt",
+                "description": "Short-sleeve white uniform shirt in breathable cotton blend. Sizes 6–10.",
+                "price": 129000,
+                "rating": 4.6,
+                "reviewCount": 540,
+                "soldCount": 3100,
+                "stock": 230,
+                "tags": [
+                  "kids"
+                ],
+                "attributes": {
+                  "material": "cotton blend",
+                  "sizes": "6-10"
+                },
+                "shipDaysMin": 1,
+                "shipDaysMax": 3,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-minhan",
+                "name": "Minh An Stationery",
+                "tier": "preferred",
+                "rating": 4.8,
+                "shipFee": 25000,
+                "city": "Hanoi"
+              },
+              "quantity": 2,
+              "lineTotal": 258000,
+              "reason": "Cheapest in-time uniform, same shop",
+              "alternatives": [
+                {
+                  "product": {
+                    "id": "prod-kidzone-uniform",
+                    "shopId": "shop-kidzone",
+                    "title": "KidZone Organic Cotton Uniform Shirt",
+                    "category": "uniform-shirt",
+                    "description": "Organic cotton uniform shirt with reinforced collar. Sizes 6–12.",
+                    "price": 230000,
+                    "rating": 4.9,
+                    "reviewCount": 260,
+                    "soldCount": 980,
+                    "stock": 90,
+                    "tags": [
+                      "organic-cotton",
+                      "kids",
+                      "premium"
+                    ],
+                    "attributes": {
+                      "material": "organic cotton"
+                    },
+                    "shipDaysMin": 2,
+                    "shipDaysMax": 4,
+                    "updatedForDemandAt": null
+                  },
+                  "shop": {
+                    "id": "shop-kidzone",
+                    "name": "KidZone Mall",
+                    "tier": "mall",
+                    "rating": 4.9,
+                    "shipFee": 30000,
+                    "city": "HCMC"
+                  },
+                  "score": 0.8,
+                  "matchedTags": [],
+                  "arrivesBy": "2026-08-24"
+                }
+              ]
+            },
+            {
+              "itemKey": "crayons",
+              "product": {
+                "id": "prod-minhan-crayons",
+                "shopId": "shop-minhan",
+                "title": "Minh An Washable Crayons 24 Colours",
+                "category": "crayons-paints",
+                "description": "24 non-toxic washable crayons in a flip-top box. Thick sticks that resist breaking.",
+                "price": 55000,
+                "rating": 4.6,
+                "reviewCount": 700,
+                "soldCount": 4200,
+                "stock": 300,
+                "tags": [
+                  "kids",
+                  "eco-friendly"
+                ],
+                "attributes": {
+                  "count": "24"
+                },
+                "shipDaysMin": 1,
+                "shipDaysMax": 3,
+                "updatedForDemandAt": null
+              },
+              "shop": {
+                "id": "shop-minhan",
+                "name": "Minh An Stationery",
+                "tier": "preferred",
+                "rating": 4.8,
+                "shipFee": 25000,
+                "city": "Hanoi"
+              },
+              "quantity": 1,
+              "lineTotal": 55000,
+              "reason": "Washable, adds to Minh An free-ship order",
+              "alternatives": []
+            }
+          ],
+          "noMatch": [
+            {
+              "itemKey": "backpack",
+              "needLabel": "Anti-hunchback backpack",
+              "reason": "none_in_budget"
+            }
+          ],
+          "skipped": [],
+          "shops": [
+            {
+              "shopId": "shop-minhan",
+              "shopName": "Minh An Stationery",
+              "subtotal": 760000,
+              "shipping": 25000,
+              "shopDiscount": 30000,
+              "voucherCodes": [
+                "MINHAN30",
+                "FREESHIP"
+              ]
+            },
+            {
+              "shopId": "shop-kidzone",
+              "shopName": "KidZone Mall",
+              "subtotal": 320000,
+              "shipping": 30000,
+              "shopDiscount": 0,
+              "voucherCodes": [
+                "FREESHIP"
+              ]
+            }
+          ],
+          "itemsTotal": 1080000,
+          "shippingTotal": 55000,
+          "discountTotal": 135000,
+          "grandTotal": 1000000,
+          "savings": [
+            {
+              "label": "Buy 7 items at Minh An Stationery: free shipping + MINHAN30 voucher",
+              "amount": 55000
+            },
+            {
+              "label": "Free shipping at KidZone Mall",
+              "amount": 30000
+            },
+            {
+              "label": "Platform voucher KITLY50",
+              "amount": 50000
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "explain",
+      "status": "running"
+    }
+  },
+  {
+    "event": "explanation",
+    "data": {
+      "delta": "I built a Grade 1 kit that arrives by Aug 25 and stays within your 1,500,000₫ budget. "
+    }
+  },
+  {
+    "event": "explanation",
+    "data": {
+      "delta": "Most items come from Minh An Stationery, so you get free shipping there plus the MINHAN30 voucher. "
+    }
+  },
+  {
+    "event": "explanation",
+    "data": {
+      "delta": "Bago Bags is cheaper but ships in 6–9 days, so it was left out. "
+    }
+  },
+  {
+    "event": "explanation",
+    "data": {
+      "delta": "Shoes come from KidZone Mall because it is the only in-time option. "
+    }
+  },
+  {
+    "event": "explanation",
+    "data": {
+      "delta": "No backpack is both anti-hunchback and under 400,000₫ yet, so I left that slot open instead of guessing. "
+    }
+  },
+  {
+    "event": "explanation",
+    "data": {
+      "delta": "Total: 1.000.000₫."
+    }
+  },
+  {
+    "event": "step",
+    "data": {
+      "id": "explain",
+      "status": "done"
+    }
+  },
+  {
+    "event": "done",
+    "data": {
+      "sessionId": "9b6f1c1e-2c4a-4d1e-9a51-7f3c2b8d0a01"
+    }
+  }
+]
