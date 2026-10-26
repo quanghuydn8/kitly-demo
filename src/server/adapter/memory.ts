@@ -57,6 +57,11 @@ export class InMemoryAdapter implements CommerceAdapter {
     return { sessionId };
   }
 
+  async getIntentSession(sessionId: string) {
+    const s = this.sessions.get(sessionId);
+    return s ? { sessionId, query: s.query, plan: clone(s.plan) } : null;
+  }
+
   async recordDemandItems(
     sessionId: string,
     items: { item: PlanItem; matchedCount: number; budgetHint: number | null }[],

@@ -131,6 +131,22 @@ export function runAdapterContract(
       ).rejects.toThrow();
     });
 
+    it("getIntentSession returns a recorded session's query + plan, null for unknown or malformed ids", async () => {
+      const plan: KitPlan = {
+        event: "camping_trip",
+        language: "en",
+        budget: 900000,
+        deadline: null,
+        items: [],
+        assumptions: ["Assumed 2 people"],
+      };
+      const query = `${CONTRACT_QUERY_PREFIX} camping for two`;
+      const { sessionId } = await a.recordIntent({ query, plan, source: "live" });
+      expect(await a.getIntentSession(sessionId)).toEqual({ sessionId, query, plan });
+      expect(await a.getIntentSession("00000000-0000-4000-8000-00000000dead")).toBeNull();
+      expect(await a.getIntentSession("not-a-session")).toBeNull();
+    });
+
     it("updateListing snapshots; undoListing restores step by step, then null", async () => {
       const v0 = (await a.getProduct(HERO))!;
       try {

@@ -54,6 +54,8 @@ export interface CommerceAdapter {
   searchProducts(q: ProductQuery): Promise<Product[]>;
   listVouchers(): Promise<Voucher[]>;
   recordIntent(s: { query: string; plan: KitPlan; source: "live" | "seed" }): Promise<{ sessionId: string }>;
+  /** A recorded intent session (refine checks it exists); null for unknown or malformed ids. */
+  getIntentSession(sessionId: string): Promise<{ sessionId: string; query: string; plan: KitPlan } | null>;
   recordDemandItems(
     sessionId: string,
     items: { item: PlanItem; matchedCount: number; budgetHint: number | null }[],

@@ -83,6 +83,7 @@ interface CommerceAdapter {
   searchProducts(q: { text?: string; category?: CategoryId; tagsAny?: string[]; maxPrice?: number; limit?: number }): Promise<Product[]>;
   listVouchers(): Promise<Voucher[]>;
   recordIntent(s: { query: string; plan: KitPlan; source: "live" | "seed" }): Promise<{ sessionId: string }>;
+  getIntentSession(sessionId: string): Promise<{ sessionId: string; query: string; plan: KitPlan } | null>;  // null if unknown/malformed
   recordDemandItems(sessionId: string, items: { item: PlanItem; matchedCount: number; budgetHint: number | null }[]): Promise<void>;
   demandItemsSince(sinceIso: string, filter?: { category?: CategoryId }): Promise<DemandItemRow[]>;
   updateListing(productId: string, patch: Pick<Product, "title" | "description" | "tags" | "attributes">): Promise<Product>;  // snapshots previous version

@@ -15,6 +15,7 @@ import { todayIso } from "@/server/today";
 import { dbSchema } from "@/server/seed/migration";
 
 const PAGE = 1000;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface ProductRow {
   id: string;
@@ -202,6 +203,18 @@ export class SupabaseAdapter implements CommerceAdapter {
       "recordIntent",
     );
     return { sessionId: (row as { id: string }).id };
+  }
+
+  async getIntentSession(
+    sessionId: string,
+  ): Promise<{ sessionId: string; query: string; plan: KitPlan } | null> {
+    // id is a uuid column: a malformed id would be a Postgres cast error, so it is simply "not found".
+    if (!UUID.test(sessionId)) return null;
+    const row = check(
+      await this.db.from("intent_sessions").select("query, plan").eq("id", sessionId).maybeSingle(),
+      "getIntentSession",
+    ) as { query: string; plan: KitPlan } | null;
+    return row ? { sessionId, query: row.query, plan: row.plan } : null;
   }
 
   async recordDemandItems(
