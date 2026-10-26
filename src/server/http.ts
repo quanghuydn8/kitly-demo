@@ -17,3 +17,29 @@ export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response
     }
   };
 }
+
+/** Streams `{ event, data }` items as Server-Sent Events (`event: x` + one-line JSON `data:`), pulling lazily. */
+export function sseResponse(events: AsyncIterable<{ event: string; data: unknown }>): Response {
+  const it = events[Symbol.asyncIterator]();
+  const enc = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const next = await it.next();
+      if (next.done) return controller.close();
+      controller.enqueue(
+        enc.encode(`event: ${next.value.event}\ndata: ${JSON.stringify(next.value.data)}\n\n`),
+      );
+    },
+    async cancel() {
+      await it.return?.(undefined);
+    },
+  });
+  return new Response(body, {
+    headers: {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+      connection: "keep-alive",
+      "x-accel-buffering": "no",
+    },
+  });
+}
