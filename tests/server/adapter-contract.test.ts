@@ -9,7 +9,7 @@ runAdapterContract("InMemoryAdapter", () => new InMemoryAdapter());
 
 if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
   runAdapterContract("SupabaseAdapter", () => new SupabaseAdapter(), {
-    // Remove the live sessions this suite recorded so seeded demand counts stay exact (demand_items cascade).
+    // Remove the live sessions + advice rows this suite recorded so seeded demand counts stay exact (demand_items cascade).
     cleanup: async () => {
       const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
         db: { schema: process.env.KITLY_DB_SCHEMA || "public" },
@@ -17,6 +17,8 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       });
       const { error } = await db.from("intent_sessions").delete().like("query", `${CONTRACT_QUERY_PREFIX}%`);
       if (error) throw new Error(error.message);
+      const advice = await db.from("insight_advice").delete().like("gap_key", `${CONTRACT_QUERY_PREFIX}%`);
+      if (advice.error) throw new Error(advice.error.message);
     },
   });
 }

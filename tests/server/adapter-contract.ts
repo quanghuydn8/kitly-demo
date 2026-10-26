@@ -147,6 +147,17 @@ export function runAdapterContract(
       expect(await a.getIntentSession("not-a-session")).toBeNull();
     });
 
+    it("insight advice cache: unknown keys are absent, save upserts by gap key", async () => {
+      const key = `${CONTRACT_QUERY_PREFIX}|kids-raincoat|backpack-cover`;
+      expect(await a.getInsightAdvice([key])).toEqual([]);
+      await a.saveInsightAdvice({ gapKey: key, countsSignature: "1/0/assortment_gap", advice: "First." });
+      await a.saveInsightAdvice({ gapKey: key, countsSignature: "2/0/assortment_gap", advice: "Second." });
+      expect(await a.getInsightAdvice([key, `${CONTRACT_QUERY_PREFIX}|none|`])).toEqual([
+        { gapKey: key, countsSignature: "2/0/assortment_gap", advice: "Second." },
+      ]);
+      expect(await a.getInsightAdvice([])).toEqual([]);
+    });
+
     it("updateListing snapshots; undoListing restores step by step, then null", async () => {
       const v0 = (await a.getProduct(HERO))!;
       try {

@@ -68,4 +68,14 @@ export interface CommerceAdapter {
   ): Promise<Product>;
   /** Restores the latest snapshot; null if there is none. */
   undoListing(productId: string): Promise<Product | null>;
+  /** Cached seller-advice sentences (table insight_advice) for these gap keys; unknown keys are simply absent. */
+  getInsightAdvice(gapKeys: string[]): Promise<InsightAdvice[]>;
+  /** Upserts one advice row by gap key. */
+  saveInsightAdvice(row: InsightAdvice): Promise<void>;
+}
+
+export interface InsightAdvice {
+  gapKey: string;
+  countsSignature: string;
+  advice: string;
 }

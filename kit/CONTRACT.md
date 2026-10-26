@@ -88,7 +88,10 @@ interface CommerceAdapter {
   demandItemsSince(sinceIso: string, filter?: { category?: CategoryId }): Promise<DemandItemRow[]>;
   updateListing(productId: string, patch: Pick<Product, "title" | "description" | "tags" | "attributes">): Promise<Product>;  // snapshots previous version
   undoListing(productId: string): Promise<Product | null>;   // restores latest snapshot, null if none
+  getInsightAdvice(gapKeys: string[]): Promise<InsightAdvice[]>;   // cached seller advice (insight_advice); unknown keys absent
+  saveInsightAdvice(row: InsightAdvice): Promise<void>;            // upsert by gapKey
 }
+interface InsightAdvice { gapKey: string; countsSignature: string; advice: string }
 interface DemandItemRow { sessionId: string; createdAt: string; event: EventType; needLabel: string; category: CategoryId | null; tags: string[]; matchedCount: number; budgetHint: number | null }
 ```
 

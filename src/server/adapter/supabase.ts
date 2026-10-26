@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import type {
   CommerceAdapter,
   DemandItemRow,
+  InsightAdvice,
   KitPlan,
   PlanItem,
   Product,
@@ -319,5 +320,26 @@ export class SupabaseAdapter implements CommerceAdapter {
     );
     check(await this.db.from("product_versions").delete().eq("id", latest.id), "undoListing");
     return toProduct(row as ProductRow);
+  }
+
+  async getInsightAdvice(gapKeys: string[]): Promise<InsightAdvice[]> {
+    if (gapKeys.length === 0) return [];
+    const rows = check(
+      await this.db.from("insight_advice").select("gap_key, counts_signature, advice").in("gap_key", gapKeys),
+      "getInsightAdvice",
+    ) as { gap_key: string; counts_signature: string; advice: string }[];
+    return rows.map((r) => ({ gapKey: r.gap_key, countsSignature: r.counts_signature, advice: r.advice }));
+  }
+
+  async saveInsightAdvice(row: InsightAdvice): Promise<void> {
+    check(
+      await this.db
+        .from("insight_advice")
+        .upsert(
+          { gap_key: row.gapKey, counts_signature: row.countsSignature, advice: row.advice },
+          { onConflict: "gap_key" },
+        ),
+      "saveInsightAdvice",
+    );
   }
 }

@@ -4,6 +4,7 @@ import { fixtures } from "@/contract/fixtures";
 import type {
   CommerceAdapter,
   DemandItemRow,
+  InsightAdvice,
   KitPlan,
   PlanItem,
   Product,
@@ -22,6 +23,7 @@ export class InMemoryAdapter implements CommerceAdapter {
   private demand: DemandItemRow[] = clone(fixtures.demandItems);
   private sessions = new Map<string, { query: string; plan: KitPlan; source: string; createdAt: string }>();
   private versions = new Map<string, Product[]>(); // productId -> snapshot stack
+  private advice = new Map<string, InsightAdvice>(); // gapKey -> cached advice
 
   async listShops() {
     return clone(this.shops);
@@ -109,5 +111,13 @@ export class InMemoryAdapter implements CommerceAdapter {
     if (!prev) return null;
     this.products.set(productId, prev);
     return clone(prev);
+  }
+
+  async getInsightAdvice(gapKeys: string[]) {
+    return gapKeys.flatMap((k) => (this.advice.has(k) ? [clone(this.advice.get(k)!)] : []));
+  }
+
+  async saveInsightAdvice(row: InsightAdvice) {
+    this.advice.set(row.gapKey, clone(row));
   }
 }
