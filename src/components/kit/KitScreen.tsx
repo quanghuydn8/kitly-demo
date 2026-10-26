@@ -7,7 +7,8 @@ import { PackageSearch, ShoppingCart, Sparkles, XCircle } from "lucide-react";
 import type { BasketOption, KitPlan } from "@/contract/types";
 import { cartStore } from "@/lib/client/cart-store";
 import { kitToCartItems, swapAlternative } from "@/lib/client/kit-basket";
-import { KIT_MOCK, runKit, type KitRun } from "@/lib/client/kit-source";
+import { PROFILE_LABEL, type Profile } from "@/lib/client/kit-compare";
+import { KIT_MOCK, kitRequest, refineRequest, runKit, type KitRun } from "@/lib/client/kit-source";
 import { initialKitState, kitReducer, resultView } from "@/lib/client/kit-state";
 import { rememberKitQuery } from "@/lib/client/last-query";
 import { sellerApi } from "@/lib/client/seller-api";
@@ -17,18 +18,18 @@ import { KitResultSkeleton } from "./KitResultSkeleton";
 import { NeedForm } from "./NeedForm";
 import { PlanCard } from "./PlanCard";
 import { RefineBox } from "./RefineBox";
+import { ThreeBaskets } from "./ThreeBaskets";
 import { Timeline } from "./Timeline";
 import { TotalsPanel } from "./TotalsPanel";
 
 const notifyMe = (gapKey: string) => sellerApi().watch(gapKey);
 
-const PROFILE_LABEL = { saver: "Saver", balanced: "Balanced", premium: "Premium" } as const;
-
 export function KitScreen() {
   const router = useRouter();
   const q = useSearchParams().get("q") ?? "";
   const [state, dispatch] = useReducer(kitReducer, initialKitState);
-  const [tab, setTab] = useState(0);
+  // Which basket the detailed view (swap, totals, explanation) shows; Balanced unless the buyer picks another.
+  const [profile, setProfile] = useState<Profile>("balanced");
   // Client-side swaps, valid only for the options array they were made on.
   const [edited, setEdited] = useState<{ src: BasketOption[]; opts: BasketOption[] } | null>(null);
   const [previousPlan, setPreviousPlan] = useState<KitPlan | null>(null);
@@ -55,8 +56,8 @@ export function KitScreen() {
     if (!q || q === lastQ.current) return;
     lastQ.current = q;
     setPreviousPlan(null);
-    setTab(0);
-    start({ kind: "kit", body: { query: q } });
+    setProfile("balanced");
+    start({ kind: "kit", body: kitRequest(q) });
   }, [q, start]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -64,30 +65,29 @@ export function KitScreen() {
   function runNeed(query: string) {
     if (query === q) {
       lastQ.current = query;
-      start({ kind: "kit", body: { query } });
+      start({ kind: "kit", body: kitRequest(query) });
     } else router.replace(`/kit?q=${encodeURIComponent(query)}`, { scroll: false });
   }
 
   function refine(message: string) {
     if (!state.sessionId || !state.plan) return;
     setPreviousPlan(state.plan);
-    start({ kind: "refine", body: { sessionId: state.sessionId, previousPlan: state.plan, message } });
+    start({ kind: "refine", body: refineRequest(state.sessionId, state.plan, message) });
   }
 
   const options = edited && edited.src === state.options ? edited.opts : state.options;
-  const current = options[Math.min(tab, options.length - 1)] as BasketOption | undefined;
+  const current = (options.find((o) => o.profile === profile) ?? options[0]) as BasketOption | undefined;
   const running = state.status === "running";
   const view = resultView(state, Boolean(q));
 
   function swap(itemKey: string, altIndex: number) {
-    const i = Math.min(tab, options.length - 1);
-    const next = options.map((o, j) => (j === i ? swapAlternative(o, itemKey, altIndex, state.plan?.budget ?? null) : o));
+    const next = options.map((o) => (o === current ? swapAlternative(o, itemKey, altIndex, state.plan?.budget ?? null) : o));
     setEdited({ src: state.options, opts: next });
   }
 
-  function addKitToCart() {
-    if (!current || current.lines.length === 0) return;
-    cartStore.addMany(kitToCartItems(current));
+  function addKitToCart(option: BasketOption | undefined = current) {
+    if (!option || option.lines.length === 0) return;
+    cartStore.addMany(kitToCartItems(option));
     router.push("/cart");
   }
 
@@ -113,22 +113,15 @@ export function KitScreen() {
           </aside>
 
           <div className={`min-w-0 space-y-4 ${state.refining ? "opacity-50" : ""}`}>
-            {options.length > 1 && (
-              <div className="flex gap-1 rounded-xl bg-white p-1 shadow-sm" role="tablist">
-                {options.map((o, i) => (
-                  <button
-                    key={o.profile}
-                    role="tab"
-                    aria-selected={i === tab}
-                    onClick={() => setTab(i)}
-                    className={`flex-1 rounded-lg px-3 py-1.5 text-sm ${
-                      i === tab ? "bg-[var(--accent)] font-semibold text-white" : "text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {PROFILE_LABEL[o.profile]}
-                  </button>
-                ))}
-              </div>
+            {view === "basket" && options.length > 1 && (
+              <ThreeBaskets
+                options={options}
+                plan={state.plan}
+                selected={current?.profile ?? "balanced"}
+                onSelect={setProfile}
+                onChoose={(p) => addKitToCart(options.find((o) => o.profile === p))}
+                disabled={running}
+              />
             )}
             {view === "skeleton" && <KitResultSkeleton />}
             {view === "empty" && (
@@ -163,11 +156,12 @@ export function KitScreen() {
                     <>
                     <button
                       type="button"
-                      onClick={addKitToCart}
+                      onClick={() => addKitToCart()}
                       disabled={running || current.lines.length === 0}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-white shadow-sm disabled:opacity-50"
                     >
-                      <ShoppingCart className="h-5 w-5" /> Add kit to cart
+                      <ShoppingCart className="h-5 w-5" />
+                      {options.length > 1 ? `Add ${PROFILE_LABEL[current.profile]} kit to cart` : "Add kit to cart"}
                     </button>
                     <p className="-mt-2 text-center text-xs text-gray-400">
                       The cart shows list prices; Kitly&apos;s voucher savings are listed above.

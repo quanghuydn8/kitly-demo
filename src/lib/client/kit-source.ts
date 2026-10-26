@@ -1,7 +1,8 @@
 // Where Kitly events come from: the live SSE endpoints (POST /api/kit, /api/kit/refine) or, with
 // NEXT_PUBLIC_KITLY_MOCK=1, a replay of the recorded Beat 1 stream with 300 ms gaps (CONTRACT.md §4).
 import { KitSseEventSchema } from "@/contract/schemas";
-import type { KitRequest, KitSseEvent, RefineRequest } from "@/contract/types";
+import type { KitPlan, KitRequest, KitSseEvent, RefineRequest } from "@/contract/types";
+import { KIT_PROFILES } from "./kit-compare";
 import { readSseStream, type RawSseEvent } from "./sse";
 
 export const KIT_MOCK = process.env.NEXT_PUBLIC_KITLY_MOCK === "1";
@@ -47,6 +48,16 @@ export async function replayKitSample(
     onEvent(e);
   }
 }
+
+/** Kitly always asks for the three baskets (T20b); the server returns one option per profile. */
+export const kitRequest = (query: string): KitRequest => ({ query, profiles: [...KIT_PROFILES] });
+
+export const refineRequest = (sessionId: string, previousPlan: KitPlan, message: string): RefineRequest => ({
+  sessionId,
+  previousPlan,
+  message,
+  profiles: [...KIT_PROFILES],
+});
 
 export type KitRun = { kind: "kit"; body: KitRequest } | { kind: "refine"; body: RefineRequest };
 
