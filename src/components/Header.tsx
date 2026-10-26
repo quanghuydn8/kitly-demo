@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { Search, ShoppingBag, ShoppingCart, Sparkles } from "lucide-react";
+import { BarChart3, Search, ShoppingBag, ShoppingCart, Sparkles } from "lucide-react";
 import { cartCount } from "@/lib/client/cart";
 import { useCart } from "@/lib/client/cart-store";
 
@@ -30,10 +30,12 @@ export function Header({ initialMode = "products" }: { initialMode?: Mode }) {
           <ShoppingBag className="h-6 w-6" /> DemoMart
         </Link>
         <Link
-          href="/cart"
-          className="relative order-2 ml-auto p-1 sm:order-3"
-          aria-label={`Cart, ${count} items`}
+          href="/seller"
+          className="order-2 ml-auto flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-xs font-medium hover:bg-white/25 sm:order-3"
         >
+          <BarChart3 className="h-3.5 w-3.5" /> Seller
+        </Link>
+        <Link href="/cart" className="relative order-2 p-1 sm:order-3" aria-label={`Cart, ${count} items`}>
           <ShoppingCart className="h-6 w-6" />
           {count > 0 && (
             <span

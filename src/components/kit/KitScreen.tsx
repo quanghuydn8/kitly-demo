@@ -9,6 +9,7 @@ import { cartStore } from "@/lib/client/cart-store";
 import { kitToCartItems, swapAlternative } from "@/lib/client/kit-basket";
 import { KIT_MOCK, runKit, type KitRun } from "@/lib/client/kit-source";
 import { initialKitState, kitReducer } from "@/lib/client/kit-state";
+import { sellerApi } from "@/lib/client/seller-api";
 import { Basket } from "./Basket";
 import { ExplanationPanel } from "./ExplanationPanel";
 import { NeedForm } from "./NeedForm";
@@ -16,6 +17,8 @@ import { PlanCard } from "./PlanCard";
 import { RefineBox } from "./RefineBox";
 import { Timeline } from "./Timeline";
 import { TotalsPanel } from "./TotalsPanel";
+
+const notifyMe = (gapKey: string) => sellerApi().watch(gapKey);
 
 const PROFILE_LABEL = { saver: "Saver", balanced: "Balanced", premium: "Premium" } as const;
 
@@ -132,6 +135,7 @@ export function KitScreen() {
                     diff={state.diff}
                     previousPlan={previousPlan}
                     onSwap={running ? undefined : swap}
+                    onNotify={notifyMe}
                   />
                   {state.sessionId && state.plan && <RefineBox disabled={running} onRefine={refine} />}
                 </div>

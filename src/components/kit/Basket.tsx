@@ -1,12 +1,15 @@
 // Kitly basket: one row per plan item (chosen product, reason, quantity, line total, alternatives with swap),
-// honest "No suitable product yet" gaps, "Skipped for budget" section, refine diff highlights.
+// honest "No suitable product yet" gaps (+ "Notify me" when onNotify is given), "Skipped for budget" section,
+// refine diff highlights.
 import Link from "next/link";
 import { ArrowLeftRight, ChevronDown, CircleSlash, MinusCircle, Star } from "lucide-react";
+import { gapKeyFor } from "@/contract/gap-key";
 import type { BasketLine, BasketOption, KitPlan, PlanDiff } from "@/contract/types";
 import { formatShortDate, formatVnd } from "@/lib/client/format";
 import { noMatchReason } from "@/lib/client/kit-text";
 import { TierBadge, UpdatedBadge } from "../Badges";
 import { CategoryIcon } from "../CategoryIcon";
+import { NotifyMe } from "./NotifyMe";
 
 type DiffKind = "added" | "changed" | null;
 
@@ -21,12 +24,15 @@ export function Basket({
   diff,
   previousPlan = null,
   onSwap,
+  onNotify,
 }: {
   option: BasketOption;
   plan: KitPlan | null;
   diff: PlanDiff | null;
   previousPlan?: KitPlan | null;
   onSwap?: (itemKey: string, altIndex: number) => void;
+  /** Registers a "Notify me" watch for a gap key, resolves to the new watcher count. */
+  onNotify?: (gapKey: string) => Promise<number>;
 }) {
   const kindOf = (key: string): DiffKind =>
     diff?.added.includes(key) ? "added" : diff?.changed.includes(key) ? "changed" : null;
@@ -38,6 +44,12 @@ export function Basket({
     ...option.lines.map((l) => ({ key: l.itemKey, line: l, gap: null })),
     ...option.noMatch.map((g) => ({ key: g.itemKey, line: null, gap: g })),
   ].sort((a, b) => rank(a.key) - rank(b.key));
+
+  // The seller-side gap key of a noMatch row = its plan item's category + must-have tags (T07).
+  const gapKeyOf = (k: string) => {
+    const item = plan?.items.find((i) => i.key === k);
+    return item ? gapKeyFor(item.category, item.mustHaveTags) : null;
+  };
 
   const removedLabel = (k: string) => previousPlan?.items.find((i) => i.key === k)?.needLabel ?? k;
 
@@ -71,6 +83,11 @@ export function Basket({
               <div className="font-medium text-gray-700">{r.gap!.needLabel}</div>
               <div className="text-gray-500">No suitable product yet: {noMatchReason(r.gap!, plan)}</div>
               <div className="mt-0.5 text-xs text-gray-400">Kitly never invents a product — sellers see this need.</div>
+              {onNotify && gapKeyOf(r.key) && (
+                <div className="mt-1.5">
+                  <NotifyMe gapKey={gapKeyOf(r.key)!} onNotify={onNotify} />
+                </div>
+              )}
             </div>
           </div>
         ),
