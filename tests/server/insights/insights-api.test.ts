@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import {
   ApiErrorSchema,
+  DemandWatchResponseSchema,
+  gapKeyFor,
   InsightsResponseSchema,
   type InsightsResponse,
   type KitPlan,
@@ -16,6 +18,7 @@ import { FakeLLM, models, setLLMForTests, type LLMMessage } from "@/server/llm";
 import { resetInsightsCacheForTests } from "@/server/insights";
 import { GET } from "@/app/api/seller/insights/route";
 import { POST as postKit } from "@/app/api/kit/route";
+import { POST as postWatch } from "@/app/api/demand/watch/route";
 
 const BACKPACK = "school-backpack|anti-hunchback";
 const RAINCOAT = "kids-raincoat|backpack-cover";
@@ -385,5 +388,69 @@ describe("live loop", () => {
     expect(await res.text()).toContain("event: done");
     makeLLM();
     expect(gap(await insights("all"), BACKPACK).thisWeek).toBe(before + 1);
+  });
+});
+
+// Seam S7 (T07, Full) — POST /api/demand/watch stores a "Notify me" watch; insights show the waiting buyers.
+describe("POST /api/demand/watch — Notify me", () => {
+  const watch = (body: unknown) =>
+    postWatch(
+      new NextRequest("http://localhost/api/demand/watch", {
+        method: "POST",
+        body: typeof body === "string" ? body : JSON.stringify(body),
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+  it("each watch stores one more and returns the gap's count", async () => {
+    const r1 = await watch({ gapKey: RAINCOAT });
+    expect(r1.status).toBe(200);
+    expect(DemandWatchResponseSchema.parse(await r1.json())).toEqual({ watchers: 1 });
+    expect(await (await watch({ gapKey: RAINCOAT })).json()).toEqual({ watchers: 2 });
+    expect(await (await watch({ gapKey: LAMP })).json()).toEqual({ watchers: 1 });
+  });
+
+  it("insights include watchers per gap (0 when nobody waits), for every shop view", async () => {
+    makeLLM();
+    const before = await insights("shop-minhan");
+    expect(before.gaps.every((g) => g.watchers === 0)).toBe(true);
+    await watch({ gapKey: RAINCOAT });
+    await watch({ gapKey: RAINCOAT });
+    await watch({ gapKey: BACKPACK });
+    for (const shop of ["shop-minhan", "all"]) {
+      const r = await insights(shop);
+      expect(gap(r, RAINCOAT)).toMatchObject({ type: "assortment_gap", watchers: 2 });
+      expect(gap(r, BACKPACK).watchers).toBe(1);
+      expect(gap(r, LAMP).watchers).toBe(0);
+      expect(gap(r, RAINCOAT).thisWeek).toBe(gap(before, RAINCOAT).thisWeek); // a watch is not demand
+    }
+  });
+
+  it("a noMatch row's key (gapKeyFor its plan item) lands on the same gap, whatever the tag order", async () => {
+    makeLLM();
+    await watch({ gapKey: gapKeyFor("kids-raincoat", ["backpack-cover", "backpack-cover"]) });
+    await watch({ gapKey: "kids-desk-lamp|anti-blue-light" });
+    await recordLive("back_to_school", [
+      { item: item({ category: "pencil-case", mustHaveTags: ["waterproof", "grade-1"] }), matchedCount: 0 },
+    ]);
+    expect(await (await watch({ gapKey: "pencil-case|waterproof,grade-1" })).json()).toEqual({ watchers: 1 });
+    expect(await (await watch({ gapKey: "pencil-case|grade-1,waterproof" })).json()).toEqual({ watchers: 2 });
+    const r = await insights("all");
+    expect(gap(r, RAINCOAT).watchers).toBe(1);
+    expect(gap(r, "pencil-case|grade-1,waterproof").watchers).toBe(2);
+    expect(await (await watch({ gapKey: "none|" })).json()).toEqual({ watchers: 1 });
+  });
+
+  it("400 for a missing or malformed gap key (nothing stored)", async () => {
+    for (const body of ["not json", {}, { gapKey: 7 }, { gapKey: "" }, { gapKey: "school-backpack" },
+      { gapKey: "no-such-category|grade-1" }, { gapKey: "school-backpack|Anti Hunchback" }]) {
+      const res = await watch(body);
+      expect(res.status).toBe(400);
+      expect(ApiErrorSchema.parse(await res.json()).error.code).toBe("bad_request");
+    }
+    expect(await getAdapter().countDemandWatches(["school-backpack|", "no-such-category|grade-1"])).toEqual({
+      "school-backpack|": 0,
+      "no-such-category|grade-1": 0,
+    });
   });
 });

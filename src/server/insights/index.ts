@@ -1,5 +1,5 @@
 // Seller Intelligence (CONTRACT.md §3 GET /api/seller/insights): demand rows → top unmet gaps classified for one
-// shop (or all shops) + advice, combos and top needs. Everything goes through the CommerceAdapter.
+// shop (or all shops) + advice, "Notify me" watchers (Full), combos and top needs. Everything goes through the CommerceAdapter.
 import type { CommerceAdapter, InsightsResponse, Product } from "@/contract";
 import type { LLM } from "@/server/llm";
 import { aggregateDemand, insightWindow } from "./aggregate";
@@ -48,11 +48,14 @@ export async function getSellerInsights(
       return { ...g, matchingProducts, ...(await classifyGap(g, products, shopId, llm, judgeMemo)) };
     }),
   );
-  const advice = await adviseGaps(classified, adapter, llm);
+  const [advice, watchers] = await Promise.all([
+    adviseGaps(classified, adapter, llm),
+    adapter.countDemandWatches(classified.map((g) => g.key)),
+  ]);
 
   return {
     window,
-    gaps: classified.map((g) => ({ ...g, advice: advice.get(g.key)! })),
+    gaps: classified.map((g) => ({ ...g, advice: advice.get(g.key)!, watchers: watchers[g.key] ?? 0 })),
     combos: agg.combos,
     topNeeds: agg.topNeeds,
   };
