@@ -4,6 +4,16 @@
 create schema if not exists kitly_schema;
 set search_path to kitly_schema;
 
+-- Idempotent re-run: drop ONLY the Kitly tables in child-first order, never the schema.
+drop table if exists demand_watches;
+drop table if exists insight_advice;
+drop table if exists demand_items;
+drop table if exists intent_sessions;
+drop table if exists product_versions;
+drop table if exists vouchers;
+drop table if exists products;
+drop table if exists shops;
+
 create table shops (id text primary key, name text not null, tier text not null, rating numeric not null,
   ship_fee int not null, city text not null);
 create table products (id text primary key, shop_id text references shops(id), title text not null,
@@ -29,3 +39,6 @@ create index on demand_items (created_at); create index on products (category);
 grant usage on schema kitly_schema to service_role;
 grant all privileges on all tables in schema kitly_schema to service_role;
 grant all privileges on all sequences in schema kitly_schema to service_role;
+
+-- Make PostgREST (supabase-js) see the new tables right away.
+notify pgrst, 'reload schema';
