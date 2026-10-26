@@ -1,5 +1,5 @@
 // Basket totals: items, shipping, discounts, grand total vs budget bar, savings lines; over_budget banner.
-import { AlertOctagon, PiggyBank } from "lucide-react";
+import { AlertOctagon, PackageSearch, PiggyBank } from "lucide-react";
 import type { BasketOption } from "@/contract/types";
 import { formatVnd } from "@/lib/client/format";
 
@@ -36,13 +36,30 @@ export function OverBudgetBanner({ option, budget }: { option: BasketOption; bud
 export function TotalsPanel({ option, budget }: { option: BasketOption; budget: number | null }) {
   const over = option.status === "over_budget";
   const pct = budget ? Math.min(100, Math.round((option.grandTotal / budget) * 100)) : 0;
+  // Every need is an honest gap (e.g. an off-catalog need): say so instead of a column of 0₫.
+  if (!over && option.lines.length === 0)
+    return (
+      <section
+        className="flex flex-col items-center gap-2 rounded-2xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm"
+        aria-label="Totals"
+        data-testid="totals"
+      >
+        <PackageSearch className="h-6 w-6 text-gray-400" />
+        <div className="font-medium text-gray-700">Nothing to buy yet</div>
+        None of these needs is sold on DemoMart today. Sellers now see them as unmet demand.
+      </section>
+    );
   return (
     <section className="space-y-3 rounded-2xl bg-white p-4 shadow-sm" aria-label="Totals" data-testid="totals">
       {over && <OverBudgetBanner option={option} budget={budget} />}
       <dl className="space-y-1 text-sm">
         <Row label="Items" value={formatVnd(option.itemsTotal)} />
         <Row label="Shipping" value={formatVnd(option.shippingTotal)} />
-        <Row label="Discounts" value={`-${formatVnd(option.discountTotal)}`} accent />
+        <Row
+          label="Discounts"
+          value={option.discountTotal > 0 ? `-${formatVnd(option.discountTotal)}` : formatVnd(0)}
+          accent
+        />
         <div className="flex items-baseline justify-between border-t border-gray-100 pt-2">
           <dt className="font-medium text-gray-800">Total</dt>
           <dd className="text-xl font-bold text-[var(--accent)]" data-testid="grand-total">

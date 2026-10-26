@@ -7,6 +7,7 @@ import { BarChart3, CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-rea
 import type { EnrichmentPreviewResponse, InsightsResponse, Shop } from "@/contract/types";
 import { formatShortDate } from "@/lib/client/format";
 import { sellerApi } from "@/lib/client/seller-api";
+import { BackToBuyer } from "./BackToBuyer";
 import { FixDrawer } from "./FixDrawer";
 import { GapCard, type FixedListing } from "./GapCard";
 import { CombosPanel, KpiStrip, TopNeedsPanel } from "./InsightPanels";
@@ -99,6 +100,7 @@ export function SellerScreen() {
 
   return (
     <div className="space-y-4">
+      <BackToBuyer />
       <div className="flex flex-wrap items-center gap-2">
         <BarChart3 className="h-5 w-5 text-[var(--accent)]" />
         <h1 className="text-lg font-semibold text-gray-800">Seller Intelligence</h1>

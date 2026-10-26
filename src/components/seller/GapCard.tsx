@@ -1,7 +1,7 @@
 // One unmet-demand gap: need, type badge (Listing gap blue / Assortment gap amber), this vs last week ▲%,
 // price band, needed-with chips, advice, matching products. Listing gap → candidate + evidence + Preview fix
 // (or "Fixed: Undo"); assortment gap → decision support only ("0 shops selling", buyers waiting, no add button).
-import { Lightbulb, Quote, Users } from "lucide-react";
+import { Lightbulb, PackageSearch, Quote, Users } from "lucide-react";
 import { categoryById } from "@/contract";
 import type { Gap } from "@/contract/types";
 import { formatVnd } from "@/lib/client/format";
@@ -60,7 +60,13 @@ export function GapCard({
         {gap.category ? (
           <CategoryIcon category={gap.category} className="h-12 w-12 shrink-0" iconClassName="h-6 w-6" />
         ) : (
-          <div className="h-12 w-12 shrink-0 rounded-xl bg-gray-100" />
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500"
+            role="img"
+            aria-label="Not sold on DemoMart yet"
+          >
+            <PackageSearch className="h-6 w-6" strokeWidth={1.5} />
+          </div>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">

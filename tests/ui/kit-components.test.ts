@@ -69,7 +69,7 @@ describe("Basket", () => {
     expect(t).toContain("No suitable product yet: no grade 1 notebooks matching your must-haves");
     expect(t).toContain("No suitable product yet: no school shoes arrive by Aug 25");
     expect(t).toContain("No suitable product yet: no water bottle with leak-proof");
-    expect(t).toContain("No suitable product yet: puppy bed is not sold on DemoMart yet");
+    expect(t).toContain("No suitable product yet: DemoMart does not sell puppy bed yet");
   });
 
   it("lists nice-to-haves dropped for budget under 'Skipped for budget'", () => {

@@ -3,15 +3,17 @@
 // One reducer (kit-state) consumes events from kit-source (live SSE or mock replay).
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
-import { ShoppingCart, Sparkles } from "lucide-react";
+import { PackageSearch, ShoppingCart, Sparkles, XCircle } from "lucide-react";
 import type { BasketOption, KitPlan } from "@/contract/types";
 import { cartStore } from "@/lib/client/cart-store";
 import { kitToCartItems, swapAlternative } from "@/lib/client/kit-basket";
 import { KIT_MOCK, runKit, type KitRun } from "@/lib/client/kit-source";
-import { initialKitState, kitReducer } from "@/lib/client/kit-state";
+import { initialKitState, kitReducer, resultView } from "@/lib/client/kit-state";
+import { rememberKitQuery } from "@/lib/client/last-query";
 import { sellerApi } from "@/lib/client/seller-api";
 import { Basket } from "./Basket";
 import { ExplanationPanel } from "./ExplanationPanel";
+import { KitResultSkeleton } from "./KitResultSkeleton";
 import { NeedForm } from "./NeedForm";
 import { PlanCard } from "./PlanCard";
 import { RefineBox } from "./RefineBox";
@@ -39,6 +41,7 @@ export function KitScreen() {
     const ac = new AbortController();
     abortRef.current = ac;
     lastRun.current = run;
+    if (run.kind === "kit") rememberKitQuery(run.body.query);
     setEdited(null);
     dispatch({ type: "start", refine: run.kind === "refine" });
     runKit(run, (event) => dispatch({ type: "event", event }), ac.signal).catch((e: unknown) => {
@@ -74,6 +77,7 @@ export function KitScreen() {
   const options = edited && edited.src === state.options ? edited.opts : state.options;
   const current = options[Math.min(tab, options.length - 1)] as BasketOption | undefined;
   const running = state.status === "running";
+  const view = resultView(state, Boolean(q));
 
   function swap(itemKey: string, altIndex: number) {
     const i = Math.min(tab, options.length - 1);
@@ -97,7 +101,7 @@ export function KitScreen() {
       <NeedForm initial={q} running={running} onRun={runNeed} />
 
       {/* With ?q= the timeline shows from the first frame, before the effect starts the run. */}
-      {(state.status !== "idle" || q) && (
+      {view !== "none" && (
         <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
           <aside className="space-y-4">
             <Timeline
@@ -126,7 +130,21 @@ export function KitScreen() {
                 ))}
               </div>
             )}
-            {current ? (
+            {view === "skeleton" && <KitResultSkeleton />}
+            {view === "empty" && (
+              <div className="flex flex-col items-center gap-2 rounded-2xl bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+                <PackageSearch className="h-6 w-6 text-gray-400" />
+                Kitly could not build a basket for this need. Try describing it differently, or add a budget and a
+                date.
+              </div>
+            )}
+            {view === "error" && (
+              <div className="flex flex-col items-center gap-2 rounded-2xl bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+                <XCircle className="h-6 w-6 text-red-400" />
+                No basket this time — {state.error?.message ?? "something went wrong"}. Use Retry on the left.
+              </div>
+            )}
+            {view === "basket" && current && (
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
                 <div className="min-w-0 space-y-3">
                   <Basket
@@ -141,29 +159,27 @@ export function KitScreen() {
                 </div>
                 <div className="space-y-4">
                   <TotalsPanel option={current} budget={state.plan?.budget ?? null} />
-                  <button
-                    type="button"
-                    onClick={addKitToCart}
-                    disabled={running || current.lines.length === 0}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-white shadow-sm disabled:opacity-50"
-                  >
-                    <ShoppingCart className="h-5 w-5" /> Add kit to cart
-                  </button>
-                  <p className="-mt-2 text-center text-xs text-gray-400">
-                    The cart shows list prices; Kitly&apos;s voucher savings are listed above.
-                  </p>
+                  {current.lines.length > 0 && (
+                    <>
+                    <button
+                      type="button"
+                      onClick={addKitToCart}
+                      disabled={running || current.lines.length === 0}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-white shadow-sm disabled:opacity-50"
+                    >
+                      <ShoppingCart className="h-5 w-5" /> Add kit to cart
+                    </button>
+                    <p className="-mt-2 text-center text-xs text-gray-400">
+                      The cart shows list prices; Kitly&apos;s voucher savings are listed above.
+                    </p>
+                    </>
+                  )}
                   <ExplanationPanel
                     text={state.explanation}
                     streaming={running && state.steps.some((s) => s.id === "explain" && s.status === "running")}
                   />
                 </div>
               </div>
-            ) : (
-              state.status === "running" && (
-                <div className="rounded-2xl bg-white p-8 text-center text-sm text-gray-400 shadow-sm">
-                  Your basket appears here as soon as Kitly has compared the shops…
-                </div>
-              )
             )}
           </div>
         </div>

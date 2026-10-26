@@ -202,6 +202,12 @@ describe("GapCard", () => {
     expect(t).toContain("Undo");
   });
 
+  it("a gap with no taxonomy category still shows an icon tile, never an empty box", () => {
+    const html = card({ ...assortmentGap, key: "none|", category: null, needLabel: "Dog bed" });
+    expect(html).toContain('aria-label="Not sold on DemoMart yet"');
+    expect(html.slice(html.indexOf('aria-label="Not sold on DemoMart yet"'))).toMatch(/^[^>]*>\s*<svg/);
+  });
+
   it("assortment gap without watchers hides the waiting line", () => {
     expect(text(card({ ...assortmentGap, watchers: 0 }))).not.toContain("buyers waiting");
     expect(text(card({ ...assortmentGap, watchers: 1 }))).toContain("1 buyer waiting");

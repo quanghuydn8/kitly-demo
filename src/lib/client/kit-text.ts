@@ -12,7 +12,7 @@ export function noMatchReason(entry: NoMatch, plan: KitPlan | null): string {
   const label = lowerFirst(entry.needLabel);
   switch (entry.reason) {
     case "no_category":
-      return `${label} is not sold on DemoMart yet`;
+      return `DemoMart does not sell ${label} yet`;
     case "none_in_time":
       return plan?.deadline
         ? `no ${label} arrive by ${formatShortDate(plan.deadline)}`

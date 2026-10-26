@@ -1,5 +1,5 @@
 // Kitly basket: one row per plan item (chosen product, reason, quantity, line total, alternatives with swap),
-// honest "No suitable product yet" gaps (+ "Notify me" when onNotify is given), "Skipped for budget" section,
+// honest "No suitable product yet" gaps (+ "See seller view →", + "Notify me" when onNotify is given), "Skipped for budget" section,
 // refine diff highlights.
 import Link from "next/link";
 import { ArrowLeftRight, ChevronDown, CircleSlash, MinusCircle, Star } from "lucide-react";
@@ -82,7 +82,12 @@ export function Basket({
             <div className="min-w-0 text-sm">
               <div className="font-medium text-gray-700">{r.gap!.needLabel}</div>
               <div className="text-gray-500">No suitable product yet: {noMatchReason(r.gap!, plan)}</div>
-              <div className="mt-0.5 text-xs text-gray-400">Kitly never invents a product — sellers see this need.</div>
+              <div className="mt-0.5 text-xs text-gray-400">
+                Kitly never invents a product — sellers see this need.{" "}
+                <Link href="/seller?shop=all" className="font-medium text-[var(--accent)] hover:underline">
+                  See seller view →
+                </Link>
+              </div>
               {onNotify && gapKeyOf(r.key) && (
                 <div className="mt-1.5">
                   <NotifyMe gapKey={gapKeyOf(r.key)!} onNotify={onNotify} />

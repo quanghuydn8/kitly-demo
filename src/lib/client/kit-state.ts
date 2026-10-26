@@ -101,3 +101,23 @@ function onEvent(state: KitState, e: KitSseEvent): KitState {
       };
   }
 }
+
+export type ResultView = "none" | "skeleton" | "basket" | "empty" | "error";
+
+/**
+ * Which result block the Kitly screen shows. A basket on screen always wins (a failed refine keeps the old one);
+ * `hasQuery` covers the first frame with ?q= before the run has started.
+ */
+export function resultView(state: KitState, hasQuery: boolean): ResultView {
+  if (state.options.length > 0) return "basket";
+  switch (state.status) {
+    case "idle":
+      return hasQuery ? "skeleton" : "none";
+    case "running":
+      return "skeleton";
+    case "error":
+      return "error";
+    case "done":
+      return "empty";
+  }
+}
