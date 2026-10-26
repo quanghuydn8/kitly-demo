@@ -72,6 +72,10 @@ export interface CommerceAdapter {
   getInsightAdvice(gapKeys: string[]): Promise<InsightAdvice[]>;
   /** Upserts one advice row by gap key. */
   saveInsightAdvice(row: InsightAdvice): Promise<void>;
+  /** Full: stores one "Notify me" watch (table demand_watches) and returns the new count for that gap key. */
+  addDemandWatch(gapKey: string): Promise<number>;
+  /** Full: watch counts per gap key; every requested key is present (0 when nobody watches it). */
+  countDemandWatches(gapKeys: string[]): Promise<Record<string, number>>;
 }
 
 export interface InsightAdvice {

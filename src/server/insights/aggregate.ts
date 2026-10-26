@@ -1,6 +1,6 @@
 // Insights aggregation (PRD "Insights"): pure code over demand rows — weekly windows, unmet gaps, price band,
 // needed-with, combos, top needs. No adapter, no LLM.
-import type { CategoryId, DemandItemRow, EventType } from "@/contract";
+import { gapKeyFor, type CategoryId, type DemandItemRow, type EventType } from "@/contract";
 import { addDays } from "@/server/today";
 
 /** A plan item is unmet when fewer than this many products matched it (PRD). */
@@ -19,9 +19,6 @@ export interface InsightWindow {
 export function insightWindow(today: string): InsightWindow {
   return { thisWeekFrom: addDays(today, -6), lastWeekFrom: addDays(today, -13), today };
 }
-
-export const gapKey = (category: CategoryId | null, tags: string[]) =>
-  `${category ?? "none"}|${[...new Set(tags)].sort().join(",")}`;
 
 export interface GapStats {
   key: string;
@@ -118,7 +115,7 @@ export function aggregateDemand(rows: DemandItemRow[], w: InsightWindow): Demand
 
   const unmet = groupBy(
     inWindow.filter((r) => r.matchedCount < UNMET_BELOW),
-    (r) => gapKey(r.category, r.tags),
+    (r) => gapKeyFor(r.category, r.tags),
   );
   const gaps: GapStats[] = [...unmet].map(([key, gapRows]) => {
     const first = gapRows[0];

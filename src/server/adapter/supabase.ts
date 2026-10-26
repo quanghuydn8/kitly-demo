@@ -342,4 +342,27 @@ export class SupabaseAdapter implements CommerceAdapter {
       "saveInsightAdvice",
     );
   }
+
+  async addDemandWatch(gapKey: string): Promise<number> {
+    check(await this.db.from("demand_watches").insert({ gap_key: gapKey }), "addDemandWatch");
+    return (await this.countDemandWatches([gapKey]))[gapKey];
+  }
+
+  async countDemandWatches(gapKeys: string[]): Promise<Record<string, number>> {
+    const counts: Record<string, number> = Object.fromEntries(gapKeys.map((k) => [k, 0]));
+    if (gapKeys.length === 0) return counts;
+    for (let from = 0; ; from += PAGE) {
+      const rows = check(
+        await this.db
+          .from("demand_watches")
+          .select("gap_key")
+          .in("gap_key", gapKeys)
+          .order("id")
+          .range(from, from + PAGE - 1),
+        "countDemandWatches",
+      ) as { gap_key: string }[];
+      for (const r of rows) counts[r.gap_key] += 1;
+      if (rows.length < PAGE) return counts;
+    }
+  }
 }

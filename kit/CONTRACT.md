@@ -90,6 +90,8 @@ interface CommerceAdapter {
   undoListing(productId: string): Promise<Product | null>;   // restores latest snapshot, null if none
   getInsightAdvice(gapKeys: string[]): Promise<InsightAdvice[]>;   // cached seller advice (insight_advice); unknown keys absent
   saveInsightAdvice(row: InsightAdvice): Promise<void>;            // upsert by gapKey
+  addDemandWatch(gapKey: string): Promise<number>;                 // Full: insert one demand_watches row, return new count
+  countDemandWatches(gapKeys: string[]): Promise<Record<string, number>>;  // Full: every key present, 0 if none
 }
 interface InsightAdvice { gapKey: string; countsSignature: string; advice: string }
 interface DemandItemRow { sessionId: string; createdAt: string; event: EventType; needLabel: string; category: CategoryId | null; tags: string[]; matchedCount: number; budgetHint: number | null }

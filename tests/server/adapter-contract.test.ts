@@ -19,6 +19,8 @@ if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
       if (error) throw new Error(error.message);
       const advice = await db.from("insight_advice").delete().like("gap_key", `${CONTRACT_QUERY_PREFIX}%`);
       if (advice.error) throw new Error(advice.error.message);
+      const watches = await db.from("demand_watches").delete().like("gap_key", `${CONTRACT_QUERY_PREFIX}%`);
+      if (watches.error) throw new Error(watches.error.message);
     },
   });
 }

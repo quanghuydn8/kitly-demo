@@ -8,6 +8,7 @@ import {
   KitSseEventSchema,
   CATEGORIES,
   CANONICAL_TAGS,
+  gapKeyFor,
 } from "@/contract";
 import { fixtures, kitSample } from "@/contract/fixtures";
 
@@ -70,5 +71,16 @@ describe("contract fixtures", () => {
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
     expect(names[0]).toBe("step");
+  });
+});
+
+describe("gapKeyFor", () => {
+  it("builds `${category ?? \"none\"}|${sorted unique tags}` — the key insights and Notify me share", () => {
+    expect(gapKeyFor("school-backpack", ["anti-hunchback"])).toBe("school-backpack|anti-hunchback");
+    expect(gapKeyFor("kids-raincoat", ["grade-1", "backpack-cover", "grade-1"])).toBe(
+      "kids-raincoat|backpack-cover,grade-1",
+    );
+    expect(gapKeyFor(null, ["dog"])).toBe("none|dog");
+    expect(gapKeyFor(null, [])).toBe("none|");
   });
 });

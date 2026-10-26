@@ -24,6 +24,7 @@ export class InMemoryAdapter implements CommerceAdapter {
   private sessions = new Map<string, { query: string; plan: KitPlan; source: string; createdAt: string }>();
   private versions = new Map<string, Product[]>(); // productId -> snapshot stack
   private advice = new Map<string, InsightAdvice>(); // gapKey -> cached advice
+  private watches = new Map<string, number>(); // gapKey -> "Notify me" count
 
   async listShops() {
     return clone(this.shops);
@@ -119,5 +120,15 @@ export class InMemoryAdapter implements CommerceAdapter {
 
   async saveInsightAdvice(row: InsightAdvice) {
     this.advice.set(row.gapKey, clone(row));
+  }
+
+  async addDemandWatch(gapKey: string) {
+    const n = (this.watches.get(gapKey) ?? 0) + 1;
+    this.watches.set(gapKey, n);
+    return n;
+  }
+
+  async countDemandWatches(gapKeys: string[]) {
+    return Object.fromEntries(gapKeys.map((k) => [k, this.watches.get(k) ?? 0]));
   }
 }

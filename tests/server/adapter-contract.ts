@@ -158,6 +158,17 @@ export function runAdapterContract(
       expect(await a.getInsightAdvice([])).toEqual([]);
     });
 
+    it("demand watches: each watch adds one and returns the new count; counts per key, absent keys = 0", async () => {
+      const key = `${CONTRACT_QUERY_PREFIX}|kids-raincoat|backpack-cover`;
+      const other = `${CONTRACT_QUERY_PREFIX}|none|`;
+      expect(await a.countDemandWatches([key, other])).toEqual({ [key]: 0, [other]: 0 });
+      expect(await a.addDemandWatch(key)).toBe(1);
+      expect(await a.addDemandWatch(key)).toBe(2);
+      expect(await a.addDemandWatch(other)).toBe(1);
+      expect(await a.countDemandWatches([key, other])).toEqual({ [key]: 2, [other]: 1 });
+      expect(await a.countDemandWatches([])).toEqual({});
+    });
+
     it("updateListing snapshots; undoListing restores step by step, then null", async () => {
       const v0 = (await a.getProduct(HERO))!;
       try {
