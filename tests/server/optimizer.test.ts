@@ -590,6 +590,58 @@ describe("optimize — hero fixture", () => {
   });
 });
 
+describe("optimize — profile ordering (T20a)", () => {
+  it("saver is never dearer than balanced: the quality floor applies to every profile, not only saver", () => {
+    // Balanced used to take the cheap 0.55 bag while saver's private floor (0.7 × 0.83) excluded it → saver dearer.
+    const a = shop("a", 20000);
+    const b = shop("b", 20000);
+    const p = plan([item("bag"), item("book")], 3000000);
+    const cs = {
+      bag: [
+        cand(product("bag-best", "a", 520000), a, 0.83),
+        cand(product("bag-mid", "a", 420000), a, 0.79),
+        cand(product("bag-cheap", "b", 150000), b, 0.55),
+      ],
+      book: [cand(product("book", "a", 85000), a, 0.9)],
+    };
+    const [saver, balanced, premium] = (["saver", "balanced", "premium"] as const).map((profile) =>
+      optimize(input(p, cs, { profile })),
+    );
+    expect(saver.grandTotal).toBeLessThanOrEqual(balanced.grandTotal);
+    expect(balanced.grandTotal).toBeLessThanOrEqual(premium.grandTotal);
+    // nobody picks the bag scoring far below the best (0.55 < 0.7 × 0.83)
+    for (const o of [saver, balanced, premium]) expect(o.lines.map((l) => l.product.id)).not.toContain("bag-cheap");
+    expect(saver.lines.find((l) => l.itemKey === "bag")!.product.id).toBe("bag-mid");
+    expect(premium.lines.find((l) => l.itemKey === "bag")!.product.id).toBe("bag-best");
+  });
+
+  it("property: when all three are ok, saver.grandTotal ≤ balanced.grandTotal ≤ premium.grandTotal", () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const r = rng(seed * 7919);
+      const pick = (n: number) => Math.floor(r() * n);
+      const shops = Array.from({ length: 2 + pick(3) }, (_, i) => shop(`s${i}`, 15000 + pick(5) * 5000));
+      const items = Array.from({ length: 1 + pick(6) }, (_, i) =>
+        item(`i${i}`, { required: r() < 0.6, quantity: 1 + pick(2) }),
+      );
+      const candidates: Record<string, Candidate[]> = {};
+      for (const it of items) {
+        candidates[it.key] = Array.from({ length: 1 + pick(5) }, (_, j) => {
+          const s = shops[pick(shops.length)];
+          return cand(product(`${it.key}-${j}`, s.id, (20 + pick(400)) * 1000), s, 0.3 + r() * 0.7);
+        });
+      }
+      const vouchers = [FREESHIP, KITLY50, SAVE5, voucher("S0OFF", { scope: "shop", shopId: "s0", value: 20000, minSpend: 150000 })];
+      const budget = r() < 0.2 ? null : (300 + pick(2000)) * 1000;
+      const [saver, balanced, premium] = (["saver", "balanced", "premium"] as const).map((profile) =>
+        optimize(input(plan(items, budget), candidates, { vouchers, profile })),
+      );
+      if ([saver, balanced, premium].some((o) => o.status !== "ok")) continue;
+      expect(saver.grandTotal, `seed ${seed}`).toBeLessThanOrEqual(balanced.grandTotal);
+      expect(balanced.grandTotal, `seed ${seed}`).toBeLessThanOrEqual(premium.grandTotal);
+    }
+  });
+});
+
 describe("optimize — performance (Full)", () => {
   it("12 items × 8 candidates, budget 5,000,000 runs < 200 ms", () => {
     const r = rng(42);

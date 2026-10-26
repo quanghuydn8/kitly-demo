@@ -4,7 +4,7 @@
 // 1. Items without candidates → noMatch (reason from the Matcher, else derived).
 // 2. Must-haves are forced: if their cheapest basket exceeds the budget → status "over_budget" with minimumCost.
 // 3. Nice-to-haves are dropped (lowest score-per-₫ first) until the cheapest basket fits; then re-added if they fit.
-// 4. For the kept items, hill-climb the profile objective  Σscore − α·grandTotal/costUnit  under grandTotal ≤ budget,
+// 4. For the kept items (candidates above the shared quality floor), hill-climb the profile objective  Σscore − α·grandTotal/costUnit  under grandTotal ≤ budget,
 //    pricing every state exactly (shipping per shop + vouchers), so consolidation is chosen whenever it pays.
 // Invariant: status "ok" ⇒ grandTotal ≤ budget (every returned ok state was priced and checked against the cap).
 import type { BasketOption, Candidate, KitPlan, PlanItem, Profile, Shop, Voucher } from "@/contract";
@@ -30,13 +30,20 @@ export interface OptimizerInput {
 
 /**
  * Profile weights. α = how many score points one "average line price" of extra cost is worth giving up.
- * floor = saver only considers candidates scoring ≥ floor × the item's best score.
+ * Profiles differ only in α, over the same candidate pool, so a larger α never buys a dearer basket
+ * (saver ≤ balanced ≤ premium in grand total — T20a).
  */
-export const PROFILE_WEIGHTS: Record<Profile, { alpha: number; floor: number }> = {
-  saver: { alpha: 50, floor: 0.7 },
-  balanced: { alpha: 0.25, floor: 0 },
-  premium: { alpha: 0.01, floor: 0 },
+export const PROFILE_WEIGHTS: Record<Profile, { alpha: number }> = {
+  saver: { alpha: 50 },
+  balanced: { alpha: 0.25 },
+  premium: { alpha: 0.01 },
 };
+
+/**
+ * Quality floor shared by every profile: only candidates scoring ≥ floor × the item's best score are picked.
+ * Shared, not saver-only: a saver-only floor made the cheapest profile the pickiest and dearer than balanced.
+ */
+export const QUALITY_FLOOR = 0.7;
 
 interface Usable {
   item: PlanItem;
@@ -59,7 +66,7 @@ function median(xs: number[]): number {
 
 export function optimize(input: OptimizerInput): BasketOption {
   const { plan, profile } = input;
-  const { alpha, floor } = PROFILE_WEIGHTS[profile];
+  const { alpha } = PROFILE_WEIGHTS[profile];
   const pricer = new Pricer(input.shops, input.vouchers, input.today ?? demoToday());
   const cap = plan.budget ?? Infinity;
 
@@ -73,7 +80,7 @@ export function optimize(input: OptimizerInput): BasketOption {
       noMatch.push({ itemKey: item.key, needLabel: item.needLabel, reason });
       continue;
     }
-    const minScore = floor * all[0].score;
+    const minScore = QUALITY_FLOOR * all[0].score;
     usable.push({ item, all, pool: all.filter((c) => c.score >= minScore) });
   }
 

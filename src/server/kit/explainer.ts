@@ -67,3 +67,80 @@ export function explainOption(
     { role: "user", content: JSON.stringify(facts(plan, option, changes)) },
   ]);
 }
+
+// ---------- Three baskets (T20a): one code-written line per profile, after the prose ----------
+
+const PROFILE_NAME: Record<BasketOption["profile"], string> = { saver: "Saver", balanced: "Balanced", premium: "Premium" };
+const PROFILE_RANK: Record<BasketOption["profile"], number> = { saver: 0, balanced: 1, premium: 2 };
+
+/** The basket the prose explains: Balanced when requested, else the first option. */
+export function primaryOption(options: BasketOption[]): BasketOption {
+  return options.find((o) => o.profile === "balanced") ?? options[0];
+}
+
+/** Need labels whose chosen product differs from the base basket (plan order). */
+function changedNeeds(plan: KitPlan, o: BasketOption, base: BasketOption): string {
+  const baseProduct = new Map(base.lines.map((l) => [l.itemKey, l.product.id]));
+  return o.lines
+    .filter((l) => baseProduct.get(l.itemKey) !== l.product.id)
+    .map((l) => plan.items.find((i) => i.key === l.itemKey)?.needLabel ?? l.itemKey)
+    .join(", ");
+}
+
+/**
+ * One line per option, compared with `base` ("Saver saves 210.000₫ by choosing cheaper …"). Written by code, not
+ * the model, so every amount is exact. Buyer's language; profile names stay as the UI shows them.
+ */
+export function profileLines(plan: KitPlan, options: BasketOption[], base: BasketOption): string[] {
+  const vi = plan.language === "vi";
+  const baseName = PROFILE_NAME[base.profile];
+  return options.map((o) => {
+    const name = PROFILE_NAME[o.profile];
+    const total = formatVnd(o.grandTotal);
+    if (o.status === "over_budget") {
+      const min = formatVnd(o.minimumCost ?? o.grandTotal);
+      return vi ? `${name}: vượt ngân sách — tối thiểu ${min}.` : `${name}: over budget — at least ${min}.`;
+    }
+    if (o === base) {
+      const n = o.shops.length;
+      const value = o.profile === "balanced";
+      return vi
+        ? `${name}: ${total} từ ${n} shop${value ? " — cân bằng nhất giữa giá và chất lượng" : ""}.`
+        : `${name}: ${total} from ${n} shop${n === 1 ? "" : "s"}${value ? " — the best value for the money" : ""}.`;
+    }
+    const delta = o.grandTotal - base.grandTotal;
+    if (delta === 0) {
+      const cheaperSide = PROFILE_RANK[o.profile] < PROFILE_RANK[base.profile];
+      if (vi)
+        return cheaperSide
+          ? `${name}: ${total}, bằng ${baseName} — không có lựa chọn rẻ hơn đáng lấy.`
+          : `${name}: ${total}, bằng ${baseName} — đây đã là những món được đánh giá cao nhất.`;
+      return cheaperSide
+        ? `${name}: ${total}, the same as ${baseName} — no cheaper picks worth taking.`
+        : `${name}: ${total}, the same as ${baseName} — these are already the best-rated picks.`;
+    }
+    const needs = changedNeeds(plan, o, base);
+    if (delta < 0) {
+      const by = needs ? (vi ? ` nhờ chọn ${needs} rẻ hơn` : ` by choosing cheaper ${needs}`) : "";
+      return vi
+        ? `${name} tiết kiệm ${formatVnd(-delta)}${by} — tổng ${total}.`
+        : `${name} saves ${formatVnd(-delta)}${by} — ${total} in total.`;
+    }
+    const forWhat = needs ? (vi ? ` để lấy ${needs} được đánh giá cao hơn` : ` for better-rated ${needs}`) : "";
+    return vi
+      ? `${name} thêm ${formatVnd(delta)}${forWhat} — tổng ${total}.`
+      : `${name} costs ${formatVnd(delta)} more${forWhat} — ${total} in total.`;
+  });
+}
+
+/** Prose about the primary basket (model), then — when several profiles were asked for — one line per profile. */
+export async function* explainKit(
+  llm: LLM,
+  plan: KitPlan,
+  options: BasketOption[],
+  changes?: PlanChanges,
+): AsyncGenerator<string> {
+  const base = primaryOption(options);
+  yield* explainOption(llm, plan, base, changes);
+  if (options.length > 1) yield `\n\n${profileLines(plan, options, base).join("\n")}`;
+}

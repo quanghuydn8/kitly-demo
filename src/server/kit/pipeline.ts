@@ -11,7 +11,7 @@ import type {
 import type { LLM } from "@/server/llm";
 import { optimize, type NoMatchReason } from "@/server/optimizer";
 import { formatVnd } from "@/server/optimizer/present";
-import { explainOption } from "./explainer";
+import { explainKit, primaryOption } from "./explainer";
 import { matchPlan, type PlanMatch } from "./matcher";
 import { planKit } from "./planner";
 import { diffPlans } from "./plan-diff";
@@ -107,11 +107,11 @@ export async function* kitStream(src: PlanSource, profiles: Profile[], deps: Kit
     const options = profiles.map((profile) =>
       optimize({ plan, candidates, noMatchReasons, shops, vouchers, profile, today: deps.today }),
     );
-    yield step("optimize", "done", optimizeDetail(options[0]));
+    yield step("optimize", "done", optimizeDetail(primaryOption(options)));
     yield { event: "options", data: { options } };
 
     yield step("explain", "running");
-    const deltas = explainOption(deps.llm, plan, options[0], src.previous && diff ? { previous: src.previous, diff } : undefined)[Symbol.asyncIterator]();
+    const deltas = explainKit(deps.llm, plan, options, src.previous && diff ? { previous: src.previous, diff } : undefined);
     for (;;) {
       const next = await llmCall(() => deltas.next());
       if (next.done) break;
