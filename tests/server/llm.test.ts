@@ -91,6 +91,28 @@ describe("FakeLLM", () => {
     await expect(llm.structured("m", Answer, [])).rejects.toThrow();
   });
 
+  it("answers from a respond() function by call name once the queue is empty (order-free fakes)", async () => {
+    const llm = new FakeLLM({
+      structured: [{ city: "Hue", days: 1 }],
+      respond: ({ name, messages }) => ({ city: `${name}:${messages[0].content}`, days: 3 }),
+    });
+    expect(await llm.structured("m", Answer, [{ role: "user", content: "a" }], "x")).toEqual({
+      city: "Hue",
+      days: 1,
+    });
+    expect(await llm.structured("m", Answer, [{ role: "user", content: "b" }], "trip")).toEqual({
+      city: "trip:b",
+      days: 3,
+    });
+    await expect(
+      new FakeLLM({
+        respond: () => {
+          throw new Error("model down");
+        },
+      }).structured("m", Answer, []),
+    ).rejects.toThrow("model down");
+  });
+
   it("streams the configured chunks", async () => {
     const llm = new FakeLLM({ stream: ["a", "b"] });
     const parts: string[] = [];
