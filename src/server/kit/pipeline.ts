@@ -6,7 +6,6 @@ import type {
   CommerceAdapter,
   KitPlan,
   KitSseEvent,
-  PlanDiff,
   Profile,
 } from "@/contract";
 import type { LLM } from "@/server/llm";
@@ -15,6 +14,7 @@ import { formatVnd } from "@/server/optimizer/present";
 import { explainOption } from "./explainer";
 import { matchPlan, type PlanMatch } from "./matcher";
 import { planKit } from "./planner";
+import { diffPlans } from "./plan-diff";
 
 export interface KitDeps {
   adapter: CommerceAdapter;
@@ -66,10 +66,11 @@ export interface PlanSource {
   makePlan: () => Promise<KitPlan>;
   /** Records the session for this plan, returns its id. */
   record: (plan: KitPlan) => Promise<string>;
-  diff?: (plan: KitPlan) => PlanDiff;
+  /** Refine only: the plan being revised → `plan.diff` + the explainer is told what changed. */
+  previous?: KitPlan;
 }
 
-/** Shared body of /api/kit and (later) /api/kit/refine: plan → match → optimize → explain. */
+/** Shared body of /api/kit and /api/kit/refine: plan → match → optimize → explain. */
 export async function* kitStream(src: PlanSource, profiles: Profile[], deps: KitDeps): AsyncGenerator<KitSseEvent> {
   try {
     yield step("understand", "running");
@@ -79,7 +80,7 @@ export async function* kitStream(src: PlanSource, profiles: Profile[], deps: Kit
     yield step("plan", "running");
     const sessionId = await src.record(plan);
     yield step("plan", "done", `Planned ${plan.items.length} item${plan.items.length === 1 ? "" : "s"}`);
-    const diff = src.diff?.(plan);
+    const diff = src.previous ? diffPlans(src.previous, plan) : undefined;
     yield { event: "plan", data: diff ? { sessionId, plan, diff } : { sessionId, plan } };
 
     yield step("search", "running");
@@ -110,7 +111,7 @@ export async function* kitStream(src: PlanSource, profiles: Profile[], deps: Kit
     yield { event: "options", data: { options } };
 
     yield step("explain", "running");
-    const deltas = explainOption(deps.llm, plan, options[0])[Symbol.asyncIterator]();
+    const deltas = explainOption(deps.llm, plan, options[0], src.previous && diff ? { previous: src.previous, diff } : undefined)[Symbol.asyncIterator]();
     for (;;) {
       const next = await llmCall(() => deltas.next());
       if (next.done) break;
