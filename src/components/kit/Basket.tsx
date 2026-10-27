@@ -102,7 +102,11 @@ export function Basket({
           <div className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Skipped for budget</div>
           <ul className="mt-1 flex flex-wrap gap-1.5">
             {option.skipped.map((s) => (
-              <li key={s.itemKey} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+              <li
+                key={s.itemKey}
+                className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
+                data-testid={`skipped-${s.itemKey}`}
+              >
                 {s.needLabel}
               </li>
             ))}

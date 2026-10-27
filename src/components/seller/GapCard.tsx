@@ -86,8 +86,13 @@ export function GapCard({
           <h3 className="mt-1 font-semibold text-gray-800">{gap.needLabel}</h3>
         </div>
         <div className="shrink-0 text-right">
-          <div className="text-2xl font-bold text-gray-800">{gap.thisWeek}</div>
-          <div className="text-[11px] text-gray-500">{`this week · ${gap.lastWeek} last week`}</div>
+          <div className="text-2xl font-bold text-gray-800" data-testid="gap-this-week">
+            {gap.thisWeek}
+          </div>
+          <div
+            className="text-[11px] text-gray-500"
+            data-testid="gap-last-week"
+          >{`this week · ${gap.lastWeek} last week`}</div>
           <div className={`text-xs font-semibold ${up ? "text-emerald-600" : "text-gray-500"}`}>{trend}</div>
         </div>
       </div>
@@ -95,13 +100,13 @@ export function GapCard({
       <dl className="mt-3 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
         <div className="flex gap-1">
           <dt className="text-gray-500">Price band:</dt>
-          <dd className="font-medium text-gray-800">
+          <dd className="font-medium text-gray-800" data-testid="gap-price-band">
             {gap.priceBand ? `${formatVnd(gap.priceBand.p25)} – ${formatVnd(gap.priceBand.p75)}` : "—"}
           </dd>
         </div>
         <div className="flex gap-1">
           <dt className="text-gray-500">Supply:</dt>
-          <dd className="font-medium text-gray-800">
+          <dd className="font-medium text-gray-800" data-testid="gap-supply">
             {gap.type === "assortment_gap"
               ? sellingCopy(gap)
               : plural(gap.matchingProducts, "matching product", "matching products")}

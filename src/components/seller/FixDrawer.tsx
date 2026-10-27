@@ -43,11 +43,13 @@ export function FixDrawer({
             <h3 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">Title</h3>
             <div className="mt-1 rounded-lg bg-gray-50 p-2">
               <div className="text-[10px] font-semibold text-gray-400 uppercase">Before</div>
-              <div className="text-gray-700">{before.title}</div>
+              <div className="text-gray-700" data-testid="title-before">
+                {before.title}
+              </div>
             </div>
             <div className="mt-1.5 rounded-lg bg-emerald-50 p-2">
               <div className="text-[10px] font-semibold text-emerald-600 uppercase">After</div>
-              <div className="text-gray-800">
+              <div className="text-gray-800" data-testid="title-after">
                 {kept.title}
                 {after.title.length > kept.title.length && (
                   <span className="font-medium text-emerald-700">{after.title.slice(kept.title.length)}</span>
