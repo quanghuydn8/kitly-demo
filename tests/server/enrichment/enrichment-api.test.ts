@@ -244,6 +244,15 @@ describe("apply + undo", () => {
     expect((await getAdapter().getProduct(HERO))!.updatedForDemandAt).toBeNull();
   });
 
+  it("serverless: apply works on another instance (no shared memory) and rejects a tampered proposalId", async () => {
+    const p = await previewHero();
+    resetProposalsForTests(); // what a different Vercel instance sees: nothing in process memory
+    const tampered = p.proposalId.slice(0, -2) + (p.proposalId.endsWith("aa") ? "bb" : "aa");
+    expect(await errorCode(await call(apply, "apply", { proposalId: tampered }), 404)).toBe("not_found");
+    await ok(await call(apply, "apply", { proposalId: p.proposalId }), ProductResponseSchema);
+    expect((await getAdapter().getProduct(HERO))!.updatedForDemandAt).not.toBeNull();
+  });
+
   it("a proposal is still valid just under 30 min", async () => {
     const p = await previewHero();
     clock += 30 * 60 * 1000 - 1;

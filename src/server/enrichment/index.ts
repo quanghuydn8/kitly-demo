@@ -5,7 +5,7 @@ import type { CommerceAdapter, EnrichmentPreviewResponse, Product } from "@/cont
 import type { LLM } from "@/server/llm";
 import { keywordCheck, mergeEnrichment } from "./merge";
 import { parseGapKey, proposeEnrichment } from "./propose";
-import { deleteProposal, getProposal, saveProposal } from "./proposals";
+import { getProposal, saveProposal } from "./proposals";
 
 export { keywordCheck, mergeEnrichment, MAX_TITLE, type Proposal } from "./merge";
 export { parseGapKey, proposeEnrichment } from "./propose";
@@ -72,12 +72,14 @@ export async function applyEnrichment(
   if (!p) throw new EnrichmentError(404, "not_found", `unknown or expired proposal ${proposalId}`);
   const current = await deps.adapter.getProduct(p.productId);
   if (!current) throw new EnrichmentError(404, "not_found", `unknown product ${p.productId}`);
+  // Proposals are stateless tokens: a second apply is "already used" when the listing already is `after`.
+  const listing = (x: Product) => ({ title: x.title, description: x.description, tags: x.tags, attributes: x.attributes });
+  if (current.updatedForDemandAt !== null && isDeepStrictEqual(listing(current), listing(p.after)))
+    throw new EnrichmentError(404, "not_found", `proposal ${proposalId.slice(0, 12)}… was already applied`);
   if (!isDeepStrictEqual(current, p.before))
     throw new EnrichmentError(409, "conflict", "the listing changed since the preview; preview again");
   const { title, description, tags, attributes } = p.after;
-  const product = await deps.adapter.updateListing(p.productId, { title, description, tags, attributes });
-  deleteProposal(proposalId);
-  return product;
+  return deps.adapter.updateListing(p.productId, { title, description, tags, attributes });
 }
 
 /** Restores the latest snapshot; 404 when there is nothing to undo. */

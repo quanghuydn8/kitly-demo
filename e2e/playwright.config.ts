@@ -1,6 +1,8 @@
 // Playwright e2e of the DEMO.md script (seam S7) against a running app: BASE_URL, real DB, real LLM.
-// Run: BASE_URL=http://localhost:3012 npx playwright test -c e2e/playwright.config.ts   (npm run e2e once wired)
+// Run: BASE_URL=http://localhost:3012 npm run e2e   (deployed demo: also KITLY_BASIC_AUTH=user:pass)
 import type { PlaywrightTestConfig } from "./pw";
+
+const [authUser, authPass] = (process.env.KITLY_BASIC_AUTH ?? "").split(":");
 
 const config: PlaywrightTestConfig = {
   testDir: ".",
@@ -19,6 +21,7 @@ const config: PlaywrightTestConfig = {
     trace: "retain-on-failure",
     actionTimeout: 30_000,
     navigationTimeout: 60_000,
+    ...(authUser ? { httpCredentials: { username: authUser, password: authPass ?? "" } } : {}),
   },
 };
 
