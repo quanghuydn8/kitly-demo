@@ -20,7 +20,7 @@ const NEED =
   "My kid starts Grade 1. Budget 1.5M VND, need everything by Aug 25. The backpack must be anti-hunchback, under 400k.";
 const REFINE = "School gives the uniform, cut the budget to 1M."; // DEMO.md Beat 2: 1M never goes over budget (probe 28/10)
 const RUN = 4 * 60_000; // one kit/refine run (planner + matcher + explainer through the proxy)
-const INSIGHTS = 2 * 60_000; // cold /api/seller/insights (classification + advice)
+const INSIGHTS = 4 * 60_000; // cold /api/seller/insights (classification + advice)
 
 /** Restore the hero listing if a previous (failed) attempt left it enriched. */
 async function undoHeroIfEnriched(page: Page) {
