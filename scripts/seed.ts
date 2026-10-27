@@ -109,7 +109,7 @@ try {
     const counts: number[] = [];
     for (const [from, to] of Object.values(weeks)) {
       const { rows } = await client.query(
-        `select count(*)::int as n from ${schema}.demand_items
+        `select count(distinct session_id)::int as n from ${schema}.demand_items
          where created_at >= $1 and created_at < $2 and category is not distinct from $3 and tags = $4::text[]`,
         [from, to, n.category, n.tags],
       );

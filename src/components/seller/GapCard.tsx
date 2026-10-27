@@ -19,17 +19,24 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
 export function GapCard({
   gap,
-  fixed,
+  fixed: fixedInPage,
   busy = false,
+  appliedFixSuppressed = false,
   onPreview,
   onUndo,
 }: {
   gap: Gap;
+  /** In-page applied fix (this session); wins over gap.appliedFix. */
   fixed: FixedListing | null;
   busy?: boolean;
+  /** True right after an in-page Undo: ignore the stale gap.appliedFix until the next refresh. */
+  appliedFixSuppressed?: boolean;
   onPreview: (productId: string) => void;
   onUndo: (productId: string) => void;
 }) {
+  // F5: the server's appliedFix survives reloads; the in-page state covers the moment before the next refresh.
+  const fixed: FixedListing | null =
+    fixedInPage ?? (!appliedFixSuppressed && gap.appliedFix ? { productId: gap.appliedFix.productId, title: gap.appliedFix.title } : null);
   const t = TYPE[gap.type];
   const trend = formatTrend(gap.thisWeek, gap.lastWeek);
   const up = gap.thisWeek > gap.lastWeek;
@@ -109,7 +116,9 @@ export function GapCard({
           <dd className="font-medium text-gray-800" data-testid="gap-supply">
             {gap.type === "assortment_gap"
               ? sellingCopy(gap)
-              : plural(gap.matchingProducts, "matching product", "matching products")}
+              : gap.matchingProducts === 1
+                ? "1 listing could match if its tags were fixed"
+                : `${gap.matchingProducts} listings could match if their tags were fixed`}
           </dd>
         </div>
       </dl>

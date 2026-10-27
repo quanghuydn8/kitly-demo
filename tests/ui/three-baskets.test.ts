@@ -149,3 +149,67 @@ describe("Kitly request bodies", () => {
     expect(RefineRequestSchema.parse(body)).toEqual(body);
   });
 });
+
+describe("F8: merged identical baskets", () => {
+  const same = (profile: BasketOption["profile"]): BasketOption => ({ ...balanced, profile });
+
+  it("merges baskets with the same lines and total into one column labelled 'Saver = Balanced'", () => {
+    const cmp = compareBaskets([same("saver"), balanced, premium], plan);
+    expect(cmp.columns.map((c) => c.label)).toEqual(["Saver = Balanced", "Premium"]);
+    expect(cmp.columns[0].profiles).toEqual(["saver", "balanced"]);
+    expect(cmp.columns[0].profile).toBe("balanced"); // Balanced represents the group
+    expect(cmp.rows.every((r) => r.cells.length === 2)).toBe(true);
+  });
+
+  it("merges all three", () => {
+    const cmp = compareBaskets([same("saver"), balanced, same("premium")], plan);
+    expect(cmp.columns.map((c) => c.label)).toEqual(["Saver = Balanced = Premium"]);
+  });
+
+  it("does not merge when the totals differ even if lines match", () => {
+    const cmp = compareBaskets([{ ...same("saver"), grandTotal: 1 }, balanced], plan);
+    expect(cmp.columns).toHaveLength(2);
+  });
+
+  it("does not merge when quantities differ", () => {
+    const lines = balanced.lines.map((l, i) => (i === 0 ? { ...l, quantity: l.quantity + 1 } : l));
+    expect(compareBaskets([{ ...same("saver"), lines }, balanced], plan).columns).toHaveLength(2);
+  });
+
+  it("renders one column with the merged label and marks it selected when any member is selected", () => {
+    const html = renderToStaticMarkup(
+      createElement(ThreeBaskets, {
+        options: [same("saver"), balanced, premium],
+        plan,
+        selected: "saver",
+        onSelect: () => {},
+        onChoose: () => {},
+      }),
+    );
+    expect(text(html)).toContain("Saver = Balanced");
+    expect(html.match(/data-testid="choose-/g)!.length).toBe(2);
+    expect(html).toMatch(/role="tab" aria-selected="true"[^>]*>Saver = Balanced/);
+  });
+
+  it("two empty over-budget baskets are not merged away into nonsense: zero-line options never merge with lined ones", () => {
+    const empty = { ...balanced, lines: [], grandTotal: 0 };
+    expect(compareBaskets([{ ...empty, profile: "saver" }, balanced], plan).columns).toHaveLength(2);
+  });
+});
+
+describe("F8: over-budget basket cannot be chosen", () => {
+  const html = renderToStaticMarkup(
+    createElement(ThreeBaskets, {
+      options: [saver, balanced, { ...premium, status: "over_budget" as const }],
+      plan,
+      selected: "balanced",
+      onSelect: () => {},
+      onChoose: () => {},
+    }),
+  );
+  it("disables Choose this kit for over_budget with a reason, others stay enabled", () => {
+    expect(html).toMatch(/data-testid="choose-premium"[^>]*disabled=""/);
+    expect(html).not.toMatch(/data-testid="choose-balanced"[^>]*disabled=""/);
+    expect(text(html)).toContain("Over budget — pick another kit or raise your budget");
+  });
+});

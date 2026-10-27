@@ -117,6 +117,9 @@ function checkMoney(o: BasketOption, vouchers: Voucher[]) {
   }
   expect(o.discountTotal).toBeGreaterThanOrEqual(0);
   expect(o.grandTotal).toBeGreaterThanOrEqual(0);
+  // F9: savings are real deductions only, so they add up to the Discounts line the UI shows
+  expect(sum(o.savings.map((sv) => sv.amount))).toBe(o.discountTotal);
+  for (const sv of o.savings) expect(sv.label).not.toMatch(/instead of several/i);
 }
 
 /** Free-shipping coverage implied by the groups (FREESHIP code on a group covers up to its value). */
@@ -333,7 +336,7 @@ describe("optimize — choices (S1)", () => {
     expect(o.noMatch).toEqual([{ itemKey: "x", needLabel: "Need x", reason: "no_product_with_tags" }]);
   });
 
-  it("consolidation: a near-equal candidate at a shop already in the basket wins when it lowers total cost, with a savings line", () => {
+  it("consolidation: a near-equal candidate at a shop already in the basket wins when it lowers total cost (explained on the line, not as a savings line)", () => {
     const a = shop("a", 30000, { name: "Minh An Stationery" });
     const b = shop("b", 30000, { name: "Other Shop" });
     const p = plan([item("x"), item("y")], 1000000);
@@ -347,9 +350,8 @@ describe("optimize — choices (S1)", () => {
     expect(o.lines.find((l) => l.itemKey === "y")!.product.id).toBe("y-a");
     expect(o.shops).toHaveLength(1);
     expect(o.grandTotal).toBe(230000);
-    const line = o.savings.find((s) => s.label.includes("Minh An Stationery") && s.label.includes("2 items"));
-    expect(line).toBeDefined();
-    expect(line!.amount).toBe(25000); // (95k + 30k extra shipping) − 100k
+    expect(o.savings).toEqual([]); // F9: no counterfactual "one shipping fee instead of several" line, no real deduction here
+    checkMoney(o, []);
     // the chosen line explains itself
     expect(o.lines.find((l) => l.itemKey === "y")!.reason).toMatch(/same shop/i);
   });

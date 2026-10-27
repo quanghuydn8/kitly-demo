@@ -163,7 +163,8 @@ describe("GapCard", () => {
     expect(t).toContain("300.000₫ – 400.000₫");
     expect(t).toContain("Kids raincoat");
     expect(t).toContain("Say anti-hunchback in your backpack listing.");
-    expect(t).toContain("0 matching products");
+    expect(t).toContain("0 listings could match if their tags were fixed");
+    expect(t).not.toContain("matching product");
     expect(t).toContain("Minh An Kids Backpack New Model 2026");
     expect(t).toContain("“S-shaped straps that keep the spine straight.”");
     expect(t).toContain("Preview fix");
@@ -176,6 +177,37 @@ describe("GapCard", () => {
     expect(t).toContain("Fixed");
     expect(t).toContain("Undo");
     expect(t).not.toContain("Preview fix");
+  });
+
+  it("F12: supply line pluralises 'listing could match if its tags were fixed'", () => {
+    expect(text(card({ ...listingGap, matchingProducts: 1 }))).toContain("1 listing could match if its tags were fixed");
+    expect(text(card({ ...listingGap, matchingProducts: 2 }))).toContain("2 listings could match if their tags were fixed");
+  });
+
+  it("F5: gap.appliedFix shows Fixed + Undo after reload, with Undo wired to appliedFix.productId", () => {
+    const applied = { productId: "prod-minhan-backpack", title: "Minh An Kids Backpack", appliedAt: "2026-08-20T01:00:00Z" };
+    const html = card({ ...listingGap, appliedFix: applied });
+    const t = text(html);
+    expect(t).toContain("Fixed");
+    expect(t).toContain("Minh An Kids Backpack");
+    expect(t).toContain("Undo");
+    expect(t).not.toContain("Preview fix");
+    // assortment gap carrying appliedFix keeps Undo too
+    expect(text(card({ ...assortmentGap, appliedFix: applied }))).toContain("Undo");
+  });
+
+  it("F5: appliedFix null or suppressed (just undone in page) goes back to Preview fix", () => {
+    const applied = { productId: "prod-minhan-backpack", title: "Minh An Kids Backpack", appliedAt: "2026-08-20T01:00:00Z" };
+    expect(text(card({ ...listingGap, appliedFix: null }))).toContain("Preview fix");
+    const t = text(card({ ...listingGap, appliedFix: applied }, { appliedFixSuppressed: true }));
+    expect(t).toContain("Preview fix");
+    expect(t).not.toContain("Undo");
+  });
+
+  it("in-page fixed state wins over gap.appliedFix", () => {
+    const applied = { productId: "a", title: "From server", appliedAt: "x" };
+    const t = text(card({ ...listingGap, appliedFix: applied }, { fixed: { productId: "b", title: "From page" } }));
+    expect(t).toContain("From page");
   });
 
   it("assortment gap: amber badge, 0 shops selling, buyers waiting, no add-product button", () => {

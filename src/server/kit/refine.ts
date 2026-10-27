@@ -35,6 +35,7 @@ export function runRefine(
       record: async (plan) =>
         (await deps.adapter.recordIntent({ query: input.message, plan, source: "live" })).sessionId,
       previous: input.previousPlan,
+      logDemand: false, // a refinement is the same buyer need, not new demand (F3)
     },
     normalizeProfiles(input.profiles),
     deps,

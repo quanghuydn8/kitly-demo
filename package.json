@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/db-migrate.ts",
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
-    "eval": "tsx --env-file-if-exists=.env scripts/eval.ts"
+    "eval": "tsx --env-file-if-exists=.env scripts/eval.ts",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
@@ -26,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",

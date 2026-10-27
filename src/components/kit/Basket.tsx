@@ -6,7 +6,7 @@ import { ArrowLeftRight, ChevronDown, CircleSlash, MinusCircle, Star } from "luc
 import { gapKeyFor } from "@/contract/gap-key";
 import type { BasketLine, BasketOption, KitPlan, PlanDiff } from "@/contract/types";
 import { formatShortDate, formatVnd } from "@/lib/client/format";
-import { noMatchReason } from "@/lib/client/kit-text";
+import { noMatchPrefix, noMatchReason } from "@/lib/client/kit-text";
 import { TierBadge, UpdatedBadge } from "../Badges";
 import { CategoryIcon } from "../CategoryIcon";
 import { NotifyMe } from "./NotifyMe";
@@ -81,7 +81,7 @@ export function Basket({
             </div>
             <div className="min-w-0 text-sm">
               <div className="font-medium text-gray-700">{r.gap!.needLabel}</div>
-              <div className="text-gray-500">No suitable product yet: {noMatchReason(r.gap!, plan)}</div>
+              <div className="text-gray-500">{noMatchPrefix(plan)}: {noMatchReason(r.gap!, plan)}</div>
               <div className="mt-0.5 text-xs text-gray-400">
                 Kitly never invents a product — sellers see this need.{" "}
                 <Link href="/seller?shop=all" className="font-medium text-[var(--accent)] hover:underline">

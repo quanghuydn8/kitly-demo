@@ -4,6 +4,7 @@
 import { CircleSlash, MinusCircle, ShoppingCart, Star, StarHalf } from "lucide-react";
 import type { BasketOption, KitPlan } from "@/contract/types";
 import { formatVnd } from "@/lib/client/format";
+import { noMatchPrefix, OVER_BUDGET_REASON } from "@/lib/client/kit-text";
 import { compareBaskets, type CompareCell, type CompareColumn, type CompareRow, type Profile } from "@/lib/client/kit-compare";
 
 export function ThreeBaskets({
@@ -31,10 +32,10 @@ export function ThreeBaskets({
             key={c.profile}
             type="button"
             role="tab"
-            aria-selected={c.profile === selected}
+            aria-selected={c.profiles.includes(selected)}
             onClick={() => onSelect(c.profile)}
             className={`flex-1 rounded-lg px-2 py-1.5 text-sm ${
-              c.profile === selected ? "bg-[var(--accent)] font-semibold text-white" : "text-gray-600 hover:bg-gray-50"
+              c.profiles.includes(selected) ? "bg-[var(--accent)] font-semibold text-white" : "text-gray-600 hover:bg-gray-50"
             }`}
           >
             {c.label}
@@ -49,7 +50,8 @@ export function ThreeBaskets({
             col={c}
             index={i}
             rows={rows}
-            selected={c.profile === selected}
+            plan={plan}
+            selected={c.profiles.includes(selected)}
             onSelect={onSelect}
             onChoose={onChoose}
             disabled={disabled}
@@ -68,6 +70,7 @@ function Column({
   col,
   index,
   rows,
+  plan,
   selected,
   onSelect,
   onChoose,
@@ -76,6 +79,7 @@ function Column({
   col: CompareColumn;
   index: number;
   rows: CompareRow[];
+  plan: KitPlan | null;
   selected: boolean;
   onSelect: (p: Profile) => void;
   onChoose: (p: Profile) => void;
@@ -99,7 +103,7 @@ function Column({
         <Stars col={col} />
         <div className="mt-1 text-xl font-bold text-[var(--accent)]">{formatVnd(o.grandTotal)}</div>
         <div className="text-xs text-gray-500">
-          {col.deltaVsBalanced === null || col.profile === "balanced" ? (
+          {col.deltaVsBalanced === null || col.profiles.includes("balanced") ? (
             "Our default trade-off"
           ) : (
             <span className={col.deltaVsBalanced < 0 ? "text-emerald-700" : col.deltaVsBalanced > 0 ? "text-gray-700" : ""}>
@@ -115,7 +119,7 @@ function Column({
 
       <ul className="mt-3 flex-1 space-y-1.5">
         {rows.map((r) => (
-          <Cell key={r.itemKey} profile={col.profile} row={r} cell={r.cells[index]} />
+          <Cell key={r.itemKey} profile={col.profile} row={r} cell={r.cells[index]} plan={plan} />
         ))}
       </ul>
 
@@ -123,18 +127,20 @@ function Column({
         type="button"
         data-testid={`choose-${col.profile}`}
         onClick={() => onChoose(col.profile)}
-        disabled={disabled || o.lines.length === 0}
+        disabled={disabled || over || o.lines.length === 0}
+        title={over ? OVER_BUDGET_REASON : undefined}
         className={`mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold disabled:opacity-50 ${
           selected ? "bg-[var(--accent)] text-white" : "border border-[var(--accent)] text-[var(--accent)] hover:bg-orange-50"
         }`}
       >
         <ShoppingCart className="h-4 w-4" /> Choose this kit
       </button>
+      {over && <p className="mt-1 text-center text-[11px] text-red-600">{OVER_BUDGET_REASON}</p>}
     </div>
   );
 }
 
-function Cell({ profile, row, cell }: { profile: Profile; row: CompareRow; cell: CompareCell }) {
+function Cell({ profile, row, cell, plan }: { profile: Profile; row: CompareRow; cell: CompareCell; plan: KitPlan | null }) {
   return (
     <li
       data-testid={`cell-${profile}-${row.itemKey}`}
@@ -157,7 +163,7 @@ function Cell({ profile, row, cell }: { profile: Profile; row: CompareRow; cell:
         </div>
       ) : cell.kind === "gap" ? (
         <div className="flex items-center gap-1 text-gray-500">
-          <CircleSlash className="h-3 w-3" /> No suitable product yet
+          <CircleSlash className="h-3 w-3" /> {noMatchPrefix(plan)}
         </div>
       ) : cell.kind === "skipped" ? (
         <div className="flex items-center gap-1 text-gray-500">

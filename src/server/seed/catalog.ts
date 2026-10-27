@@ -176,6 +176,24 @@ function toProducts(categoryId: string, out: CategoryOutput): Product[] {
   });
 }
 
+/** Max shipping days for the "express" product every LLM category must have (DATA.md §4 Coverage fill). */
+const EXPRESS_DAYS = 2;
+
+/**
+ * Coverage fill (DATA.md §4): rehearsal probes showed urgent needs ("camping this weekend") hit no-match only because
+ * no product in a category shipped fast enough. Unless the category already has one, the best-rated in-stock
+ * product becomes a 1–2 day product. Only the 4 planted gaps should ever show "No suitable product".
+ */
+export function coverageFill(products: Product[]): Product[] {
+  if (products.some((p) => p.stock > 0 && p.shipDaysMax <= EXPRESS_DAYS)) return products;
+  const inStock = products.filter((p) => p.stock > 0);
+  const pool = inStock.length ? inStock : products;
+  const best = pool.reduce((a, p) => (p.rating > a.rating ? p : a), pool[0]);
+  return products.map((p) =>
+    p === best ? { ...p, stock: Math.max(p.stock, 50), shipDaysMin: 1, shipDaysMax: EXPRESS_DAYS } : p,
+  );
+}
+
 /** Builds the full seeded catalog: LLM categories (cached, ≤ `concurrency` parallel calls) + planted products. */
 export async function generateCatalog(opts: {
   llm: LLM;
@@ -186,6 +204,6 @@ export async function generateCatalog(opts: {
   const outputs = await mapLimit(LLM_CATEGORIES, opts.concurrency ?? 8, (c) =>
     fetchCategory(opts.llm, opts.model, c, opts.cacheDir),
   );
-  const generated = LLM_CATEGORIES.flatMap((c, i) => toProducts(c, outputs[i]));
+  const generated = LLM_CATEGORIES.flatMap((c, i) => coverageFill(toProducts(c, outputs[i])));
   return [...plantedProducts(), ...generated];
 }

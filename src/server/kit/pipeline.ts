@@ -68,6 +68,8 @@ export interface PlanSource {
   record: (plan: KitPlan) => Promise<string>;
   /** Refine only: the plan being revised → `plan.diff` + the explainer is told what changed. */
   previous?: KitPlan;
+  /** Record one demand row per plan item (default true). Refine passes false: the session is kept, demand is not (F3). */
+  logDemand?: boolean;
 }
 
 /** Shared body of /api/kit and /api/kit/refine: plan → match → optimize → explain. */
@@ -86,14 +88,15 @@ export async function* kitStream(src: PlanSource, profiles: Profile[], deps: Kit
     yield step("search", "running");
     const match: PlanMatch = await matchPlan(deps.adapter, plan, deps.today);
     const hints = budgetHints(plan);
-    await deps.adapter.recordDemandItems(
-      sessionId,
-      plan.items.map((item) => ({
-        item,
-        matchedCount: match.byItem[item.key].candidates.length,
-        budgetHint: hints.get(item.key) ?? null,
-      })),
-    );
+    if (src.logDemand !== false)
+      await deps.adapter.recordDemandItems(
+        sessionId,
+        plan.items.map((item) => ({
+          item,
+          matchedCount: match.byItem[item.key].candidates.length,
+          budgetHint: hints.get(item.key) ?? null,
+        })),
+      );
     yield step("search", "done", `Compared ${match.productsCompared} products from ${match.shopsCompared} shops`);
 
     yield step("optimize", "running");

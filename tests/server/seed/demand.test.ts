@@ -31,8 +31,10 @@ describe("generateDemand (DATA.md §5, pure code)", () => {
     };
     for (const [key, [tw, lw]] of Object.entries(expected)) {
       const rows = demand.items.filter((r) => gapKey(r) === key);
-      expect(rows.filter((r) => inWindow(r, THIS_WEEK)).length, `${key} this week`).toBe(tw);
-      expect(rows.filter((r) => inWindow(r, LAST_WEEK)).length, `${key} last week`).toBe(lw);
+      // F6: insights count distinct sessions, so the forced counts are sessions (not rows).
+      const sessions = (w: typeof THIS_WEEK) => new Set(rows.filter((r) => inWindow(r, w)).map((r) => r.sessionId)).size;
+      expect(sessions(THIS_WEEK), `${key} this week`).toBe(tw);
+      expect(sessions(LAST_WEEK), `${key} last week`).toBe(lw);
     }
     expect(FORCED_NEEDS).toHaveLength(4);
   });

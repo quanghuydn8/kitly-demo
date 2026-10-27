@@ -12,6 +12,8 @@ export const PRICE_SLACK = 1.3;
 export interface Classification {
   type: "listing_gap" | "assortment_gap";
   candidates?: { productId: string; title: string; evidence: string }[];
+  /** F5: a product in scope already carries every gap tag because Kitly fixed its listing (null otherwise). */
+  appliedFix: { productId: string; title: string; appliedAt: string } | null;
 }
 
 const JudgementSchema = z.object({ supports: z.boolean(), evidence: z.string() });
@@ -82,14 +84,14 @@ export async function classifyGap(
   llm: LLM,
   memo: JudgeMemo,
 ): Promise<Classification> {
-  if (!gap.category || gap.tags.length === 0) return { type: "assortment_gap" };
+  if (!gap.category || gap.tags.length === 0) return { type: "assortment_gap", appliedFix: null };
+  const inScope = categoryProducts.filter((p) => shopId === "all" || p.shopId === shopId);
+  const fixed = inScope
+    .filter((p) => p.updatedForDemandAt !== null && gap.tags.every((t) => p.tags.includes(t)))
+    .sort((a, b) => b.updatedForDemandAt!.localeCompare(a.updatedForDemandAt!) || a.id.localeCompare(b.id))[0];
+  const appliedFix = fixed ? { productId: fixed.id, title: fixed.title, appliedAt: fixed.updatedForDemandAt! } : null;
   const maxPrice = gap.priceBand ? gap.priceBand.p75 * PRICE_SLACK : Infinity;
-  const pool = categoryProducts.filter(
-    (p) =>
-      (shopId === "all" || p.shopId === shopId) &&
-      p.price <= maxPrice &&
-      gap.tags.some((t) => !p.tags.includes(t)),
-  );
+  const pool = inScope.filter((p) => p.price <= maxPrice && gap.tags.some((t) => !p.tags.includes(t)));
   const judged = await Promise.all(
     pool.map(async (p) => {
       const missing = gap.tags.filter((t) => !p.tags.includes(t));
@@ -99,5 +101,7 @@ export async function classifyGap(
     }),
   );
   const candidates = judged.flat();
-  return candidates.length ? { type: "listing_gap", candidates } : { type: "assortment_gap" };
+  if (candidates.length) return { type: "listing_gap", candidates, appliedFix };
+  // Already fixed by Kitly: still a listing gap (so the card can say "Fixed · Undo"), nothing left to propose.
+  return appliedFix ? { type: "listing_gap", candidates: [], appliedFix } : { type: "assortment_gap", appliedFix: null };
 }

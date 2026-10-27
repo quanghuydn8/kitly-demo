@@ -169,23 +169,6 @@ export function optimize(input: OptimizerInput): BasketOption {
   const final = bestState!;
   const picks = picksOf(pb, final.sel);
 
-  // Consolidation savings: per shop with ≥2 lines, what it would cost if the lines that moved here
-  // went back to their standalone shop.
-  const consolidation: { shopName: string; items: number; amount: number }[] = [];
-  for (const g of final.priced.groups) {
-    if (g.picks.length < 2) continue;
-    const moved = list
-      .map((_, i) => i)
-      .filter(
-        (i) => picks[i].cand.shop.id === g.shop.id && pb.cands[i][standaloneSel[i]].shop.id !== g.shop.id,
-      );
-    if (moved.length === 0) continue;
-    const reverted = final.sel.slice();
-    for (const i of moved) reverted[i] = standaloneSel[i];
-    const amount = evaluate(pb, reverted, objective).priced.grandTotal - final.priced.grandTotal;
-    if (amount > 0) consolidation.push({ shopName: g.shop.name, items: g.picks.length, amount });
-  }
-
   const standalone = new Map(list.map((u, i) => [u.item.key, u.pool[standaloneSel[i]]]));
   return assemble(
     input,
@@ -195,7 +178,6 @@ export function optimize(input: OptimizerInput): BasketOption {
     picks,
     final,
     { status: "ok" },
-    consolidation,
     standalone,
   );
 }
@@ -212,7 +194,6 @@ function assemble(
   picks: LinePick[],
   state: State,
   extra: Pick<BasketOption, "status" | "minimumCost" | "costDrivers">,
-  consolidation: { shopName: string; items: number; amount: number }[] = [],
   standalone = new Map<string, Candidate>(),
 ): BasketOption {
   const p = state.priced;
@@ -229,7 +210,7 @@ function assemble(
     shippingTotal: p.shippingTotal,
     discountTotal: p.discountTotal,
     grandTotal: p.grandTotal,
-    savings: buildSavings(p, consolidation),
+    savings: buildSavings(p),
     ...(extra.minimumCost !== undefined
       ? { minimumCost: extra.minimumCost, costDrivers: extra.costDrivers }
       : {}),

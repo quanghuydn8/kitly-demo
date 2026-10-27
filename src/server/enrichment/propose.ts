@@ -33,7 +33,7 @@ const SYSTEM = [
   "tags: canonical tags the listing does not have yet and its text supports. Always consider needTags first, then other canonical tags (e.g. lightweight from a stated low weight, grade-1 from an age of about 6, waterproof from water-resistant). For each tag, evidence = an exact quote copied verbatim from the description or title, max 20 words.",
   "titleSuffix: max 40 characters, English, the key buyer terms (e.g. 'Anti-Hunchback, Lightweight, Grade 1'); do not repeat words already in the title.",
   "attributes: short name/value pairs stated in the text (e.g. weight '0.75 kg', age '6-8'); skip names the listing already has.",
-  "descriptionAppend: one or two plain sentences in English restating the supported features in buyer words, no hype.",
+  "descriptionAppend: one or two plain English sentences with ONLY information that is not already in the description (a feature the title/tags/attributes make clear but the description never says, in buyer words), no hype. Never restate or reword a sentence the description already has. If there is nothing new to add, return an empty string.",
 ].join("\n");
 
 const CANONICAL = new Set<string>(CANONICAL_TAGS);
@@ -77,9 +77,26 @@ export async function proposeEnrichment(product: Product, gap: Gap, llm: LLM): P
     titleSuffix: draft.titleSuffix,
     tags,
     attributes,
-    descriptionAppend: draft.descriptionAppend,
+    descriptionAppend: onlyNewSentences(draft.descriptionAppend, product.description),
     evidence: [...new Set(tags.map((t) => kept.get(t)!))].join(" … "),
   };
+}
+
+const words = (t: string) => t.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+/** A sentence counts as "already said" when at least this share of its words appear in the description. */
+const ALREADY_SAID = 0.7;
+
+/** Code guard for F13: keeps only the appended sentences that add words the description does not already contain. */
+export function onlyNewSentences(append: string, description: string): string {
+  const known = new Set(words(description));
+  return append
+    .split(/(?<=[.!?])\s+/)
+    .map((x) => x.trim())
+    .filter((sentence) => {
+      const w = words(sentence);
+      return w.length > 0 && w.filter((x) => known.has(x)).length / w.length < ALREADY_SAID;
+    })
+    .join(" ");
 }
 
 const rank = (gap: Gap, tag: string) => (gap.tags.includes(tag) ? gap.tags.indexOf(tag) : gap.tags.length);

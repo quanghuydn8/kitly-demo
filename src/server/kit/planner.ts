@@ -46,8 +46,10 @@ export function plannerSystemPrompt(today: string): string {
     "Language: Vietnamese input → language vi; otherwise en. Write needLabel and assumptions in that language.",
     "Event: the life event behind the need (back_to_school, newborn, first_apartment, camping_trip, home_office, tet_gifts), else other.",
     "Items: list everything the need typically requires (usually 6–10 items for an event), one item per category, short unique kebab-case keys.",
-    "required = true for essentials, false for nice-to-haves. quantity = units needed (e.g. 2 uniform shirts).",
-    "mustHaveTags: only attributes the buyer explicitly demands for that specific item ('the backpack must be anti-hunchback', 'balo phải chống gù'); usually empty. Context of the whole need (e.g. 'Grade 1', 'lớp 1', 'newborn') is never a must-have: put such tags in niceToHaveTags. niceToHaveTags: tags that would make the item better. Use only the allowed tags.",
+    "required = true for essentials, false for nice-to-haves.",
+    "quantity: pack/set-type items (book covers, pens/pencils, notebooks, crayons, wipes, diapers, …) are quantity 1 = one pack. Use quantity > 1 only when the buyer asks for it or for clothing changes (e.g. 2 uniform shirts). Never more than 3.",
+    "Be consistent: the same sentence must give the same plan (same items, keys, quantities and tags). Still list the full kit — for tet_gifts that means 5–8 gift items.",
+    "mustHaveTags: only attributes the buyer explicitly demands for that specific item ('the backpack must be anti-hunchback', 'balo phải chống gù'); usually empty. Context of the whole need (e.g. 'Grade 1', 'lớp 1', 'newborn', kids, budget, premium, gift-wrapped, eco-friendly) is never a must-have: put such tags in niceToHaveTags. niceToHaveTags: tags that would make the item better. Use only the allowed tags.",
     "maxUnitPrice: only when the buyer states a per-item price cap, else null. Use the stated number as is: 'under 400k' / 'dưới 400k' → 400000.",
     "needLabel: short buyer-language name that includes the must-have attribute (e.g. 'Anti-hunchback backpack', 'Balo chống gù').",
     "category: use null when no category fits, never force one. Items for needs the store does not cover (e.g. pets) keep category null.",
@@ -55,6 +57,18 @@ export function plannerSystemPrompt(today: string): string {
     `Categories: ${cats}.`,
   ].join("\n");
 }
+
+/** Context tags describe the whole need, not one item: they can never be a must-have (F1). */
+export const CONTEXT_TAGS: readonly string[] = [
+  "grade-1",
+  "kids",
+  "newborn-0-3m",
+  "budget",
+  "premium",
+  "gift-wrapped",
+  "eco-friendly",
+];
+export const MAX_QUANTITY = 3;
 
 const kebab = (s: string) =>
   s
@@ -80,15 +94,16 @@ export function normalizePlan(out: PlannerOutput): KitPlan {
     let key = kebab(it.key || it.needLabel);
     for (let n = 2; seen.has(key); n++) key = `${kebab(it.key || it.needLabel)}-${n}`;
     seen.add(key);
-    const must = [...new Set(it.mustHaveTags)];
+    const must = [...new Set(it.mustHaveTags)].filter((t) => !CONTEXT_TAGS.includes(t));
+    const demotedContext = it.mustHaveTags.filter((t) => CONTEXT_TAGS.includes(t));
     return {
       key,
       needLabel: it.needLabel.trim() || key,
       category: it.category,
       required: it.required,
-      quantity: Math.max(1, Math.round(it.quantity) || 1),
+      quantity: Math.min(MAX_QUANTITY, Math.max(1, Math.round(it.quantity) || 1)),
       mustHaveTags: must,
-      niceToHaveTags: [...new Set(it.niceToHaveTags)].filter((t) => !must.includes(t)),
+      niceToHaveTags: [...new Set([...it.niceToHaveTags, ...demotedContext])].filter((t) => !must.includes(t)),
       maxUnitPrice: posInt(it.maxUnitPrice),
     };
   });
@@ -102,12 +117,15 @@ export function normalizePlan(out: PlannerOutput): KitPlan {
   });
 }
 
+/** One model call; a failure (network, proxy, schema parse) is retried exactly once before it propagates (F2). */
 export async function planKit(llm: LLM, query: string, today: string, extra: LLMMessage[] = []): Promise<KitPlan> {
-  const out = await llm.structured(
-    models.planner(),
-    PlannerOutputSchema,
-    [{ role: "system", content: plannerSystemPrompt(today) }, ...extra, { role: "user", content: query }],
-    "kit_plan",
-  );
+  const messages: LLMMessage[] = [{ role: "system", content: plannerSystemPrompt(today) }, ...extra, { role: "user", content: query }];
+  const call = () => llm.structured(models.planner(), PlannerOutputSchema, messages, "kit_plan");
+  let out: PlannerOutput;
+  try {
+    out = await call();
+  } catch {
+    out = await call();
+  }
   return normalizePlan(out);
 }

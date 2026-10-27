@@ -5,7 +5,10 @@ import { addDays } from "@/server/today";
 
 /** A plan item is unmet when fewer than this many products matched it (PRD). */
 export const UNMET_BELOW = 2;
+/** F7: a gap is shown to sellers only when at least this many distinct sessions asked for it this week. */
+export const MIN_GAP_THIS_WEEK = 3;
 const COMBOS = 5;
+const NULL_LABELS = 2;
 const NEEDED_WITH = 3;
 const PAIR_EXPLAINED = 0.8;
 
@@ -32,7 +35,7 @@ export interface GapStats {
 }
 
 export interface DemandAggregate {
-  gaps: GapStats[]; // all unmet gaps in the 2-week window, sorted thisWeek desc, lastWeek desc, key asc
+  gaps: GapStats[]; // unmet gaps with thisWeek ≥ MIN_GAP_THIS_WEEK, sorted thisWeek desc, lastWeek desc, key asc
   combos: { categories: CategoryId[]; count: number }[];
   topNeeds: { event: EventType; count: number }[];
 }
@@ -60,6 +63,22 @@ function mode(values: string[]): string {
       ([v]) => v,
     ),
   )[0][0];
+}
+
+/** The `n` most common need labels (counted by distinct sessions, ties alphabetical), joined with ", ". */
+function topLabels(rows: DemandItemRow[], n: number): string {
+  const sessionsByLabel = new Map<string, Set<string>>();
+  for (const r of rows) sessionsByLabel.set(r.needLabel, (sessionsByLabel.get(r.needLabel) ?? new Set()).add(r.sessionId));
+  return [...sessionsByLabel]
+    .sort(
+      byCountThenName(
+        ([, ids]) => ids.size,
+        ([label]) => label,
+      ),
+    )
+    .slice(0, n)
+    .map(([label]) => label)
+    .join(", ");
 }
 
 function combinations<T>(xs: T[], k: number): T[][] {
@@ -115,8 +134,10 @@ export function aggregateDemand(rows: DemandItemRow[], w: InsightWindow): Demand
 
   const unmet = groupBy(
     inWindow.filter((r) => r.matchedCount < UNMET_BELOW),
-    (r) => gapKeyFor(r.category, r.tags),
+    // F6: every category-null row (needs the store does not cover) is ONE gap, whatever its tags.
+    (r) => (r.category === null ? gapKeyFor(null, []) : gapKeyFor(r.category, r.tags)),
   );
+  const distinctSessions = (rs: DemandItemRow[]) => new Set(rs.map((r) => r.sessionId)).size;
   const gaps: GapStats[] = [...unmet].map(([key, gapRows]) => {
     const first = gapRows[0];
     const hints = gapRows.flatMap((r) => (r.budgetHint === null ? [] : [r.budgetHint])).sort((a, b) => a - b);
@@ -128,13 +149,14 @@ export function aggregateDemand(rows: DemandItemRow[], w: InsightWindow): Demand
       );
       for (const c of cats) withCounts.set(c, (withCounts.get(c) ?? 0) + 1);
     }
+    const noCategory = first.category === null;
     return {
       key,
-      needLabel: mode(gapRows.map((r) => r.needLabel)),
+      needLabel: noCategory ? `Not in catalog: ${topLabels(gapRows, NULL_LABELS)}` : mode(gapRows.map((r) => r.needLabel)),
       category: first.category,
-      tags: [...new Set(first.tags)].sort(),
-      thisWeek: gapRows.filter(isThisWeek).length,
-      lastWeek: gapRows.filter((r) => !isThisWeek(r)).length,
+      tags: noCategory ? [] : [...new Set(first.tags)].sort(),
+      thisWeek: distinctSessions(gapRows.filter(isThisWeek)),
+      lastWeek: distinctSessions(gapRows.filter((r) => !isThisWeek(r))),
       priceBand: hints.length ? { p25: percentile(hints, 0.25), p75: percentile(hints, 0.75) } : null,
       neededWith: [...withCounts]
         .sort(
@@ -147,6 +169,7 @@ export function aggregateDemand(rows: DemandItemRow[], w: InsightWindow): Demand
         .map(([category, n]) => ({ category, share: round2(n / gapSessions.length) })),
     };
   });
+  gaps.splice(0, gaps.length, ...gaps.filter((g) => g.thisWeek >= MIN_GAP_THIS_WEEK));
   gaps.sort((a, b) => b.thisWeek - a.thisWeek || b.lastWeek - a.lastWeek || a.key.localeCompare(b.key));
 
   const thisWeekSessions = [...sessions.values()].filter((rs) => isThisWeek(rs[0]));

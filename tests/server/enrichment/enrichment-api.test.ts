@@ -136,6 +136,34 @@ describe("POST /api/seller/enrichment/preview", () => {
     expect(p.evidence).toBe("S-shaped straps that keep the spine straight");
   });
 
+  it("F13: description append keeps only information NOT already in the description", async () => {
+    useLLM([
+      draft({
+        descriptionAppend:
+          "Water-resistant fabric, weighs only 0.75 kg. Comes with a detachable rain cover for wet days.",
+      }),
+    ]);
+    const p = await previewHero();
+    expect(p.added.descriptionAppend).toBe("Comes with a detachable rain cover for wet days.");
+    expect(p.after.description).toBe(`${p.before.description}\n\nComes with a detachable rain cover for wet days.`);
+  });
+
+  it("F13: when the append says nothing new, nothing is appended", async () => {
+    useLLM([
+      draft({ descriptionAppend: "Padded ergonomic back panel with S-shaped straps that keep the spine straight. Sized for children aged 6–8." }),
+    ]);
+    const p = await previewHero();
+    expect(p.added.descriptionAppend).toBe("");
+    expect(p.after.description).toBe(p.before.description);
+  });
+
+  it("F13: the drafting prompt says to add only new information", async () => {
+    await previewHero();
+    const system = llm.calls[0].messages.filter((m) => m.role === "system").map((m) => m.content).join("\n");
+    expect(system).toMatch(/not already in the description/i);
+    expect(system).toMatch(/empty string/i);
+  });
+
   it("400 on a bad body or a gap of another category, 404 on an unknown product, no model call", async () => {
     expect(await errorCode(await call(preview, "preview", "{nope"), 400)).toBe("bad_request");
     expect(await errorCode(await call(preview, "preview", { productId: HERO }), 400)).toBe("bad_request");

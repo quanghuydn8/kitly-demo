@@ -2,6 +2,7 @@
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { z } from "zod";
+import { LLM_TIMEOUT_MS, STREAM_IDLE_MS, withIdleTimeout } from "./timeout";
 import type { LLM, LLMMessage } from "./types";
 
 type OutputItem = { type: string; content?: { type: string; text?: string }[] };
@@ -13,6 +14,8 @@ export class OpenAILLM implements LLM {
     this.client = new OpenAI({
       apiKey: opts?.apiKey ?? process.env.OPENAI_API_KEY,
       baseURL: opts?.baseURL ?? (process.env.OPENAI_BASE_URL || undefined),
+      timeout: LLM_TIMEOUT_MS,
+      maxRetries: 1,
     });
   }
 
@@ -41,7 +44,7 @@ export class OpenAILLM implements LLM {
   async *stream(model: string, messages: LLMMessage[]): AsyncIterable<string> {
     // Raw events via create({stream:true}); never responses.stream() — it breaks on proxies that rewrite ids.
     const events = await this.client.responses.create({ model, input: messages, stream: true });
-    for await (const e of events) {
+    for await (const e of withIdleTimeout(events, STREAM_IDLE_MS)) {
       if (e.type === "response.output_text.delta") yield e.delta;
       else if (e.type === "error") throw new Error(`LLM stream error: ${e.message}`);
       else if (e.type === "response.failed") throw new Error("LLM stream failed");

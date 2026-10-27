@@ -8,6 +8,7 @@ import { getLLM } from "@/server/llm";
 import { today } from "@/server/today";
 
 export const runtime = "nodejs";
+export const maxDuration = 120; // Vercel: LLM calls via proxy take 20–40 s
 export const dynamic = "force-dynamic";
 
 export const POST = handle(async (req: Request) => {

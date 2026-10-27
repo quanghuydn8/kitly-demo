@@ -163,6 +163,15 @@ describe("POST /api/kit", () => {
     expect(explainCall.model).toBe(process.env.KITLY_MODEL_FAST || "gpt-6-luna");
   });
 
+  it("F11: the explanation prompt asks for at most 70 words and at most 4 sentences", async () => {
+    llm = new FakeLLM({ structured: [HERO_PLAN] });
+    setLLMForTests(llm);
+    await readEvents(await post({ query: "Grade 1 kit" }));
+    const system = llm.calls.find((c) => c.kind === "stream")!.messages[0].content;
+    expect(system).toMatch(/at most 70 words/);
+    expect(system).toMatch(/at most 4 sentences/);
+  });
+
   it("records the intent session and one demand row per plan item with matchedCount + budgetHint", async () => {
     setLLMForTests(new FakeLLM({ structured: [HERO_PLAN] }));
     const evs = await readEvents(await post({ query: "Grade 1 kit" }));

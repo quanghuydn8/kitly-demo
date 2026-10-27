@@ -9,7 +9,10 @@ export const KIT_PROFILES: Profile[] = ["saver", "balanced", "premium"];
 export const PROFILE_LABEL: Record<Profile, string> = { saver: "Saver", balanced: "Balanced", premium: "Premium" };
 
 export interface CompareColumn {
+  /** Representative profile: Balanced when it is in the group, else the first member. */
   profile: Profile;
+  /** All profiles this column stands for (several when identical baskets are merged), in Saver/Balanced/Premium order. */
+  profiles: Profile[];
   label: string;
   option: BasketOption;
   /** Mean product rating of the lines, null when the basket has no lines. */
@@ -53,15 +56,33 @@ function labelFor(cells: CompareCell[], fallback: string): string {
   return fallback;
 }
 
-export function compareBaskets(options: BasketOption[], plan: KitPlan | null) {
-  const ordered = [...options].sort((a, b) => KIT_PROFILES.indexOf(a.profile) - KIT_PROFILES.indexOf(b.profile));
-  const balanced = ordered.find((o) => o.profile === "balanced");
+/** Same product ids + quantities and same grand total ⇒ the buyer sees one basket, not two. */
+const basketSignature = (o: BasketOption) =>
+  `${o.grandTotal}|${o.lines
+    .map((l) => `${l.product.id}x${l.quantity}`)
+    .sort()
+    .join(",")}`;
 
-  const columns: CompareColumn[] = ordered.map((o) => {
+export function compareBaskets(options: BasketOption[], plan: KitPlan | null) {
+  const sorted = [...options].sort((a, b) => KIT_PROFILES.indexOf(a.profile) - KIT_PROFILES.indexOf(b.profile));
+  const balanced = sorted.find((o) => o.profile === "balanced");
+
+  // F8: merge identical baskets into one group (group order = first member's position).
+  const groups: BasketOption[][] = [];
+  for (const o of sorted) {
+    const g = groups.find((grp) => basketSignature(grp[0]) === basketSignature(o));
+    if (g) g.push(o);
+    else groups.push([o]);
+  }
+  const ordered = groups.map((g) => g.find((o) => o.profile === "balanced") ?? g[0]);
+
+  const columns: CompareColumn[] = groups.map((g, gi) => {
+    const o = ordered[gi];
     const rating = o.lines.length ? o.lines.reduce((s, l) => s + l.product.rating, 0) / o.lines.length : null;
     return {
       profile: o.profile,
-      label: PROFILE_LABEL[o.profile],
+      profiles: g.map((m) => m.profile),
+      label: g.map((m) => PROFILE_LABEL[m.profile]).join(" = "),
       option: o,
       rating,
       stars: rating === null ? 0 : Math.round(rating * 2) / 2,

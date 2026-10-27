@@ -79,29 +79,30 @@ export function buildGroups(priced: Priced): ShopGroup[] {
   }));
 }
 
-/** Consolidation lines first (counterfactual: vs. each line at its standalone pick), then the vouchers applied. */
-export function buildSavings(
-  priced: Priced,
-  consolidation: { shopName: string; items: number; amount: number }[],
-): Saving[] {
-  const out: Saving[] = consolidation.map((c) => ({
-    label: `Buy ${c.items} items at ${c.shopName}: one shipping fee instead of several`,
-    amount: c.amount,
-  }));
+/**
+ * Real deductions only (F9): free-shipping cover + shop voucher per shop, then the platform voucher. No counterfactual
+ * lines, so the amounts add up to `discountTotal` (the Discounts figure the UI shows).
+ */
+export function buildSavings(priced: Priced): Saving[] {
+  const out: Saving[] = [];
   for (const g of priced.groups) {
+    const amount = g.freeshipCover + g.shopDiscount;
+    if (amount <= 0) continue;
     const parts: string[] = [];
     if (g.freeshipCover > 0) parts.push("free shipping");
-    if (g.shopDiscount > 0 && g.shopVoucher) parts.push(`${g.shopVoucher.code} voucher`);
-    if (parts.length === 0) continue;
+    if (g.shopDiscount > 0) parts.push(g.shopVoucher ? `${g.shopVoucher.code} voucher` : "shop voucher");
     const what = parts.join(" + ");
     const label =
       g.picks.length > 1
         ? `Buy ${g.picks.length} items at ${g.shop.name}: ${what}`
         : `${what[0].toUpperCase()}${what.slice(1)} at ${g.shop.name}`;
-    out.push({ label, amount: g.freeshipCover + g.shopDiscount });
+    out.push({ label, amount });
   }
-  if (priced.platformVoucher && priced.platformDiscount > 0) {
-    out.push({ label: `Platform voucher ${priced.platformVoucher.code}`, amount: priced.platformDiscount });
+  if (priced.platformDiscount > 0) {
+    out.push({
+      label: priced.platformVoucher ? `Platform voucher ${priced.platformVoucher.code}` : "Platform voucher",
+      amount: priced.platformDiscount,
+    });
   }
   return out;
 }

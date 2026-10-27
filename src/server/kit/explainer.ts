@@ -54,7 +54,7 @@ export function explainOption(
 ): AsyncIterable<string> {
   const lang = plan.language === "vi" ? "Vietnamese" : "English";
   const system = [
-    `You explain a shopping kit to the buyer in ${lang}, at most 120 words, plain prose, no lists or markdown.`,
+    `You explain a shopping kit to the buyer in ${lang}, at most 70 words and at most 4 sentences, plain prose, no lists or markdown.`,
     "Say why the basket is built this way: mention the savings (vouchers, free shipping, fewer shops) and every need with no suitable product (say honestly it was left open instead of guessing).",
     "If the status is over_budget, say the minimum cost and what drives it. Mention items skipped for budget.",
     ...(changes

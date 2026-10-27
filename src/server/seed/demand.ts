@@ -360,9 +360,9 @@ export function generateDemand(opts: { products: Product[]; today: string; seed?
       [2, need.lastWeek],
     ] as const) {
       if (need.category === null) {
-        // Pet sessions: event "other", 2–3 off-taxonomy items each.
-        const sizes = count % 3 === 0 ? Array(count / 3).fill(3) : Array(count / 2).fill(2);
-        for (const size of sizes) {
+        // Pet sessions: event "other", `count` sessions (insights count sessions, F6) of 2–3 off-taxonomy items.
+        for (let s = 0; s < count; s++) {
+          const size = 2 + (s % 2);
           const entries = PET_LABELS.slice(0, size).map((label) => ({
             item: {
               key: label.toLowerCase().replace(/\W+/g, "-"),

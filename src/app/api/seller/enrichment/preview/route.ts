@@ -6,6 +6,7 @@ import { enrichmentRoute } from "@/server/enrichment/route-helpers";
 import { getLLM } from "@/server/llm";
 
 export const runtime = "nodejs";
+export const maxDuration = 120; // Vercel: LLM calls via proxy take 20–40 s
 export const dynamic = "force-dynamic";
 
 export const POST = enrichmentRoute(EnrichmentPreviewRequestSchema, "{ productId, gapKey }", (b) =>

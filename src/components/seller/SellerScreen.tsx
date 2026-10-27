@@ -28,6 +28,8 @@ export function SellerScreen() {
   const [error, setError] = useState<string | null>(null);
   // Applied fixes by gap key; kept across shop switches and refreshes so Undo stays reachable.
   const [fixed, setFixed] = useState<Record<string, FixedListing>>({});
+  // Gap keys undone in this page: their gap.appliedFix is stale until the next load.
+  const [undone, setUndone] = useState<Record<string, true>>({});
   const [busyGap, setBusyGap] = useState<string | null>(null);
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const [toast, setToast] = useState<Toast>(null);
@@ -42,7 +44,7 @@ export function SellerScreen() {
     setLoading(true);
     setError(null);
     api.insights(shopId).then(
-      (d) => id === reqId.current && (setData(d), setLoading(false)),
+      (d) => id === reqId.current && (setData(d), setUndone({}), setLoading(false)),
       (e: unknown) => id === reqId.current && (setError(msg(e)), setLoading(false)),
     );
   }, [api, shopId]);
@@ -72,6 +74,11 @@ export function SellerScreen() {
     try {
       const product = await api.apply(drawer.preview.proposalId);
       setFixed((f) => ({ ...f, [drawer.gapKey]: { productId: product.id, title: product.title } }));
+      setUndone((u) => {
+        const next = { ...u };
+        delete next[drawer.gapKey];
+        return next;
+      });
       setDrawer(null);
       setToast({ kind: "ok", text: "Listing updated — buyers with this need can now find it." });
     } catch (e) {
@@ -88,6 +95,7 @@ export function SellerScreen() {
         delete next[gapKey];
         return next;
       });
+      setUndone((u) => ({ ...u, [gapKey]: true }));
       setToast({ kind: "ok", text: "Undone — the original listing is back." });
     } catch (e) {
       setToast({ kind: "error", text: `Undo failed: ${msg(e)}` });
@@ -175,6 +183,7 @@ export function SellerScreen() {
                   key={g.key}
                   gap={g}
                   fixed={fixed[g.key] ?? null}
+                  appliedFixSuppressed={Boolean(undone[g.key])}
                   busy={busyGap === g.key}
                   onPreview={(pid) => preview(g.key, pid)}
                   onUndo={(pid) => undo(g.key, pid)}

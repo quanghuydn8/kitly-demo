@@ -72,6 +72,21 @@ describe("Basket", () => {
     expect(t).toContain("No suitable product yet: DemoMart does not sell puppy bed yet");
   });
 
+  it("F10: a vi plan renders the whole gap line in Vietnamese", () => {
+    const viPlan: KitPlan = {
+      ...plan,
+      language: "vi",
+      items: plan.items.map((i) => (i.key === "backpack" ? { ...i, needLabel: "Balo chống gù", maxUnitPrice: 400000 } : i)),
+    };
+    const o: BasketOption = {
+      ...option,
+      noMatch: [{ itemKey: "backpack", needLabel: "Balo chống gù", reason: "none_in_budget" }],
+    };
+    const t = text(basket(o, { plan: viPlan }));
+    expect(t).toContain("Chưa có sản phẩm phù hợp: chưa có balo chống gù dưới 400.000₫");
+    expect(t).not.toContain("No suitable product yet");
+  });
+
   it("lists nice-to-haves dropped for budget under 'Skipped for budget'", () => {
     const o = {
       ...option,

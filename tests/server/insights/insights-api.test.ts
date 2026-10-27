@@ -16,6 +16,11 @@ import { kitSample } from "@/contract/fixtures";
 import { getAdapter, resetAdapterForTests } from "@/server/adapter";
 import { FakeLLM, models, setLLMForTests, type LLMMessage } from "@/server/llm";
 import { resetInsightsCacheForTests } from "@/server/insights";
+import { MIN_GAP_THIS_WEEK } from "@/server/insights/aggregate";
+import { resetProposalsForTests } from "@/server/enrichment";
+import { POST as applyEnrichment } from "@/app/api/seller/enrichment/apply/route";
+import { POST as previewEnrichment } from "@/app/api/seller/enrichment/preview/route";
+import { POST as undoEnrichment } from "@/app/api/seller/enrichment/undo/route";
 import { GET } from "@/app/api/seller/insights/route";
 import { POST as postKit } from "@/app/api/kit/route";
 import { POST as postWatch } from "@/app/api/demand/watch/route";
@@ -55,6 +60,13 @@ function makeLLM(opts: { adviceFails?: boolean } = {}) {
           return { supports: true, evidence: "Certified anti-hunchback frame" };
         return { supports: false, evidence: "" };
       }
+      if (name === "listing_enrichment")
+        return {
+          titleSuffix: "Anti-Hunchback",
+          tags: [{ tag: "anti-hunchback", evidence: HERO_QUOTE }],
+          attributes: [],
+          descriptionAppend: "",
+        };
       if (name === "seller_advice") {
         if (opts.adviceFails) throw new Error("model down");
         const need = /"needLabel":"([^"]+)"/.exec(text)?.[1] ?? "?";
@@ -106,11 +118,12 @@ const gap = (r: InsightsResponse, key: string) => r.gaps.find((g) => g.key === k
 beforeEach(() => {
   resetAdapterForTests();
   resetInsightsCacheForTests();
+  resetProposalsForTests();
 });
 afterEach(() => setLLMForTests(null));
 
 describe("GET /api/seller/insights — aggregation", () => {
-  it("windows on DEMO_TODAY, counts this week / last week per gap key, sorted by thisWeek desc", async () => {
+  it("windows on DEMO_TODAY, counts this week / last week per gap key (F7: only thisWeek ≥ 3), sorted by thisWeek desc", async () => {
     makeLLM();
     const r = await insights("all");
     expect(r.window).toEqual({ thisWeekFrom: "2026-08-14", lastWeekFrom: "2026-08-07", today: "2026-08-20" });
@@ -120,10 +133,8 @@ describe("GET /api/seller/insights — aggregation", () => {
       [LAMP, 4, 3],
       ["none|", 3, 1],
       ["diapers|newborn-0-3m", 3, 0],
-      ["office-chair|ergonomic", 2, 0],
-      ["tent|4-person", 2, 0],
-      ["rice-cooker|compact", 0, 2],
     ]);
+    expect(MIN_GAP_THIS_WEEK).toBe(3);
     expect(gap(r, BACKPACK)).toMatchObject({
       needLabel: "Anti-hunchback backpack",
       category: "school-backpack",
@@ -141,27 +152,61 @@ describe("GET /api/seller/insights — aggregation", () => {
 
   it("only plan items with matchedCount < 2 are unmet; at most 8 gaps are returned", async () => {
     makeLLM();
-    await recordLive("back_to_school", [
-      {
-        item: item({ needLabel: "Insulated lunch box", category: "lunch-box", mustHaveTags: ["insulated"] }),
-        matchedCount: 1,
-      },
-      {
-        item: item({
-          needLabel: "Leak-proof lunch box",
-          category: "lunch-box",
-          mustHaveTags: ["leak-proof"],
-        }),
-        matchedCount: 2,
-      },
-    ]);
+    const lunch = (label: string, tag: "insulated" | "leak-proof", matchedCount: number) =>
+      item({ needLabel: label, category: "lunch-box", mustHaveTags: [tag], key: tag });
+    for (let n = 0; n < 3; n++) {
+      await recordLive("back_to_school", [{ item: lunch("Insulated lunch box", "insulated", 1), matchedCount: 1 }]);
+      await recordLive("back_to_school", [{ item: lunch("Leak-proof lunch box", "leak-proof", 2), matchedCount: 2 }]);
+      for (const c of ["tent", "rice-cooker", "office-chair"] as const)
+        await recordLive("other", [{ item: item({ needLabel: c, category: c, mustHaveTags: ["compact"] }), matchedCount: 0 }]);
+    }
     const r = await insights("all");
     const keys = r.gaps.map((g) => g.key);
     expect(keys).toHaveLength(8);
     expect(keys).toContain("lunch-box|insulated");
     expect(keys).not.toContain("lunch-box|leak-proof");
-    expect(keys).not.toContain("rice-cooker|compact"); // 0 this week, pushed out of the top 8
     expect(keys.some((k) => k.startsWith("water-bottle"))).toBe(false); // seeded rows with matchedCount ≥ 2
+  });
+
+  it("F7: a gap needs thisWeek ≥ 3 to be returned (2 sessions: hidden, 3: shown); last-week only never shows", async () => {
+    makeLLM();
+    const bag = item({ needLabel: "Foldable tent", category: "tent", mustHaveTags: ["waterproof"] });
+    for (let n = 0; n < 2; n++) await recordLive("camping_trip", [{ item: bag, matchedCount: 0 }]);
+    expect((await insights("all")).gaps.map((g) => g.key)).not.toContain("tent|waterproof");
+    await recordLive("camping_trip", [{ item: bag, matchedCount: 0 }]);
+    expect(gap(await insights("all"), "tent|waterproof").thisWeek).toBe(3);
+  });
+
+  it("F6: gaps count distinct sessions, not rows (two rows of one gap in one session = 1)", async () => {
+    makeLLM();
+    const t1 = item({ key: "t1", needLabel: "Tent A", category: "tent", mustHaveTags: ["waterproof"] });
+    const t2 = item({ key: "t2", needLabel: "Tent B", category: "tent", mustHaveTags: ["waterproof"] });
+    for (let n = 0; n < 3; n++)
+      await recordLive("camping_trip", [
+        { item: t1, matchedCount: 0 },
+        { item: t2, matchedCount: 0 },
+      ]);
+    expect(gap(await insights("all"), "tent|waterproof").thisWeek).toBe(3); // 6 rows, 3 sessions
+  });
+
+  it("F6: every category-null row is ONE 'none|' gap labelled with the 2 most common needs", async () => {
+    makeLLM();
+    const mk = (label: string) => item({ key: label, needLabel: label, category: null });
+    // 6 sessions with Dog food + Dog bed (more than any seeded label), 1 with Fish tank, plus a null item that carries tags
+    for (let n = 0; n < 6; n++)
+      await recordLive("other", [
+        { item: mk("Dog food"), matchedCount: 0 },
+        { item: mk("Dog bed"), matchedCount: 0 },
+      ]);
+    await recordLive("other", [{ item: mk("Fish tank"), matchedCount: 0 }]);
+    await recordLive("other", [{ item: { ...mk("Cat tree"), mustHaveTags: ["lightweight"] }, matchedCount: 0 }]);
+    const r = await insights("all");
+    const none = r.gaps.filter((g) => g.category === null);
+    expect(none).toHaveLength(1);
+    expect(none[0]).toMatchObject({ key: "none|", tags: [], type: "assortment_gap" });
+    expect(none[0].needLabel.split(", ")).toHaveLength(2);
+    expect(none[0].needLabel).toBe("Not in catalog: Dog bed, Dog food"); // equal counts → alphabetical
+    expect(none[0].thisWeek).toBe(3 + 6 + 1 + 1); // 3 seeded + 6 dog sessions + Fish tank + Cat tree
   });
 
   it("gap keys sort tags, so the same need with tags in another order is one gap", async () => {
@@ -169,8 +214,9 @@ describe("GET /api/seller/insights — aggregation", () => {
     const tags = (t: string[]) => item({ needLabel: "Tent", category: "tent", mustHaveTags: t });
     await recordLive("camping_trip", [{ item: tags(["waterproof", "2-person"]), matchedCount: 0 }]);
     await recordLive("camping_trip", [{ item: tags(["2-person", "waterproof"]), matchedCount: 0 }]);
+    await recordLive("camping_trip", [{ item: tags(["waterproof", "2-person"]), matchedCount: 0 }]);
     const g = gap(await insights("all"), "tent|2-person,waterproof");
-    expect(g).toMatchObject({ thisWeek: 2, tags: ["2-person", "waterproof"] });
+    expect(g).toMatchObject({ thisWeek: 3, tags: ["2-person", "waterproof"] });
   });
 
   it("price band = p25/p75 of the budget hints over both weeks (null without hints)", async () => {
@@ -317,13 +363,76 @@ describe("GET /api/seller/insights — classification", () => {
   });
 });
 
+describe("GET /api/seller/insights — F4 order inside one shop", () => {
+  it("shop view: listing gaps first, then assortment gaps, each by thisWeek desc; 'all' keeps thisWeek order", async () => {
+    makeLLM();
+    const minhan = await insights("shop-minhan");
+    const types = minhan.gaps.map((g) => g.type);
+    const firstAssortment = types.indexOf("assortment_gap");
+    expect(types.slice(0, firstAssortment).every((t) => t === "listing_gap")).toBe(true);
+    expect(types.slice(firstAssortment).every((t) => t === "assortment_gap")).toBe(true);
+    expect(minhan.gaps[0].key).toBe(BACKPACK); // 8 this week, but RAINCOAT (10) is an assortment gap
+    for (const group of [minhan.gaps.filter((g) => g.type === "listing_gap"), minhan.gaps.filter((g) => g.type === "assortment_gap")]) {
+      const counts = group.map((g) => g.thisWeek);
+      expect(counts).toEqual([...counts].sort((a, b) => b - a));
+    }
+    const all = await insights("all");
+    expect(all.gaps[0].key).toBe(RAINCOAT);
+    const allCounts = all.gaps.map((g) => g.thisWeek);
+    expect(allCounts).toEqual([...allCounts].sort((a, b) => b - a));
+  });
+});
+
+describe("GET /api/seller/insights — F5 appliedFix survives a reload", () => {
+  const call = (handler: (r: Request) => Promise<Response>, path: string, body: unknown) =>
+    handler(
+      new Request(`http://localhost/api/seller/enrichment/${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+
+  it("unfixed gaps have appliedFix null", async () => {
+    makeLLM();
+    const r = await insights("shop-minhan");
+    for (const g of r.gaps) expect(g.appliedFix ?? null).toBeNull();
+  });
+
+  it("after apply the gap stays a listing_gap with appliedFix; after undo it is the plain listing gap again", async () => {
+    makeLLM();
+    const p = await (await call(previewEnrichment, "preview", { productId: "prod-minhan-backpack", gapKey: BACKPACK })).json();
+    const applied = await (await call(applyEnrichment, "apply", { proposalId: p.proposalId })).json();
+    const appliedAt = applied.product.updatedForDemandAt as string;
+    expect(appliedAt).toBeTruthy();
+
+    for (const shop of ["shop-minhan", "all"]) {
+      const g = gap(await insights(shop), BACKPACK);
+      expect(g.type).toBe("listing_gap");
+      expect(g.appliedFix).toEqual({ productId: "prod-minhan-backpack", title: applied.product.title, appliedAt });
+    }
+    // another shop did not fix anything: its view is not "fixed"
+    const kz = gap(await insights("shop-kidzone"), BACKPACK);
+    expect(kz.appliedFix ?? null).toBeNull();
+    // other gaps are untouched
+    expect(gap(await insights("shop-minhan"), RAINCOAT).appliedFix ?? null).toBeNull();
+
+    const undone = await call(undoEnrichment, "undo", { productId: "prod-minhan-backpack" });
+    expect(undone.status).toBe(200);
+    const g2 = gap(await insights("shop-minhan"), BACKPACK);
+    expect(g2.appliedFix ?? null).toBeNull();
+    expect(g2.type).toBe("listing_gap");
+    expect(g2.candidates?.map((c) => c.productId)).toEqual(["prod-minhan-backpack"]);
+  });
+});
+
 describe("GET /api/seller/insights — advice", () => {
   it("one fast-model sentence per gap, built from the gap facts", async () => {
     const { llm } = makeLLM();
     const r = await insights("all");
     expect(gap(r, BACKPACK).advice).toBe("Advice for Anti-hunchback backpack.");
     const adviceCalls = llm.calls.filter((c) => c.name === "seller_advice");
-    expect(adviceCalls).toHaveLength(8);
+    expect(adviceCalls).toHaveLength(5);
     expect(new Set(adviceCalls.map((c) => c.model))).toEqual(new Set([models.fast()]));
     expect(llm.calls.filter((c) => c.name === "listing_fit").every((c) => c.model === models.fast())).toBe(
       true,
@@ -333,9 +442,9 @@ describe("GET /api/seller/insights — advice", () => {
   it("cache hit does not call the LLM again; changed counts regenerate only that gap", async () => {
     const { calls } = makeLLM();
     await insights("all");
-    expect(calls("seller_advice")).toBe(8);
+    expect(calls("seller_advice")).toBe(5);
     await insights("all");
-    expect(calls("seller_advice")).toBe(8);
+    expect(calls("seller_advice")).toBe(5);
     await recordLive("back_to_school", [
       {
         item: item({
@@ -347,19 +456,19 @@ describe("GET /api/seller/insights — advice", () => {
       },
     ]);
     const r = await insights("all");
-    expect(calls("seller_advice")).toBe(9);
+    expect(calls("seller_advice")).toBe(6);
     expect(gap(r, RAINCOAT).thisWeek).toBe(11);
   });
 
   it("advice is cached per gap type, so switching shops (listing ↔ assortment) does not regenerate it", async () => {
     const { calls } = makeLLM();
     await insights("shop-minhan");
-    expect(calls("seller_advice")).toBe(8);
+    expect(calls("seller_advice")).toBe(5);
     await insights("shop-kidzone"); // backpack flips to assortment_gap → one new sentence
-    expect(calls("seller_advice")).toBe(9);
+    expect(calls("seller_advice")).toBe(6);
     await insights("shop-minhan");
     await insights("shop-kidzone");
-    expect(calls("seller_advice")).toBe(9);
+    expect(calls("seller_advice")).toBe(6);
   });
 
   it("advice failure falls back to a code sentence and is not cached", async () => {
@@ -368,7 +477,7 @@ describe("GET /api/seller/insights — advice", () => {
     expect(gap(r, RAINCOAT).advice).toMatch(/10 buyers this week/);
     const { calls } = makeLLM();
     await insights("all");
-    expect(calls("seller_advice")).toBe(8);
+    expect(calls("seller_advice")).toBe(5);
   });
 });
 
@@ -430,9 +539,10 @@ describe("POST /api/demand/watch — Notify me", () => {
     makeLLM();
     await watch({ gapKey: gapKeyFor("kids-raincoat", ["backpack-cover", "backpack-cover"]) });
     await watch({ gapKey: "kids-desk-lamp|anti-blue-light" });
-    await recordLive("back_to_school", [
-      { item: item({ category: "pencil-case", mustHaveTags: ["waterproof", "grade-1"] }), matchedCount: 0 },
-    ]);
+    for (let n = 0; n < 3; n++)
+      await recordLive("back_to_school", [
+        { item: item({ category: "pencil-case", mustHaveTags: ["waterproof", "grade-1"] }), matchedCount: 0 },
+      ]);
     expect(await (await watch({ gapKey: "pencil-case|waterproof,grade-1" })).json()).toEqual({ watchers: 1 });
     expect(await (await watch({ gapKey: "pencil-case|grade-1,waterproof" })).json()).toEqual({ watchers: 2 });
     const r = await insights("all");

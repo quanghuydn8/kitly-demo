@@ -220,6 +220,8 @@ export const GapSchema = z.object({
     .array(z.object({ productId: z.string(), title: z.string(), evidence: z.string() }))
     .optional(),
   watchers: z.number().int().optional(),
+  /** F5: this shop's listing was already fixed by Kitly for this gap (survives reload; Undo reverts it). */
+  appliedFix: z.object({ productId: z.string(), title: z.string(), appliedAt: z.string() }).nullable().optional(),
 });
 export const InsightsResponseSchema = z.object({
   window: z.object({ thisWeekFrom: isoDate, lastWeekFrom: isoDate, today: isoDate }),

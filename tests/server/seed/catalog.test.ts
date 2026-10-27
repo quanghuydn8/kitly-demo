@@ -173,6 +173,15 @@ describe("generateCatalog (FakeLLM, code overwrites planted facts)", () => {
     expect(products.filter((p) => p.category === "kids-desk-lamp").length).toBeGreaterThanOrEqual(3);
   });
 
+  it("coverage fill (DATA §4, F16): every LLM category has an in-stock product arriving within 2 days, without gap tags", async () => {
+    const products = await buildTestCatalog();
+    for (const c of LLM_CATEGORIES) {
+      const express = products.filter((p) => p.category === c && p.stock > 0 && p.shipDaysMax <= 2);
+      expect(express.length, c).toBeGreaterThanOrEqual(1);
+    }
+    expect(products.some((p) => ["anti-hunchback", "backpack-cover", "anti-blue-light"].some((t) => p.tags.includes(t) && p.id !== "prod-kidzone-ergo-backpack"))).toBe(false);
+  });
+
   it("caches raw LLM output per category so a re-run makes no LLM calls", async () => {
     const dir = mkdtempSync(join(tmpdir(), "kitly-cache-"));
     const first = await generateCatalog({ llm: fakeCatalogLLM(), model: "fake-fast", cacheDir: dir });

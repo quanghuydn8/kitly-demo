@@ -10,6 +10,7 @@ import { kitToCartItems, swapAlternative } from "@/lib/client/kit-basket";
 import { PROFILE_LABEL, type Profile } from "@/lib/client/kit-compare";
 import { KIT_MOCK, kitRequest, refineRequest, runKit, type KitRun } from "@/lib/client/kit-source";
 import { initialKitState, kitReducer, resultView } from "@/lib/client/kit-state";
+import { OVER_BUDGET_REASON } from "@/lib/client/kit-text";
 import { rememberKitQuery } from "@/lib/client/last-query";
 import { sellerApi } from "@/lib/client/seller-api";
 import { Basket } from "./Basket";
@@ -86,7 +87,7 @@ export function KitScreen() {
   }
 
   function addKitToCart(option: BasketOption | undefined = current) {
-    if (!option || option.lines.length === 0) return;
+    if (!option || option.lines.length === 0 || option.status === "over_budget") return;
     cartStore.addMany(kitToCartItems(option));
     router.push("/cart");
   }
@@ -113,7 +114,7 @@ export function KitScreen() {
           </aside>
 
           <div className={`min-w-0 space-y-4 ${state.refining ? "opacity-50" : ""}`}>
-            {view === "basket" && options.length > 1 && (
+            {view === "basket" && options.length > 1 && options.some((o) => o.lines.length > 0) && (
               <ThreeBaskets
                 options={options}
                 plan={state.plan}
@@ -157,12 +158,15 @@ export function KitScreen() {
                     <button
                       type="button"
                       onClick={() => addKitToCart()}
-                      disabled={running || current.lines.length === 0}
+                      disabled={running || current.lines.length === 0 || current.status === "over_budget"}
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 font-semibold text-white shadow-sm disabled:opacity-50"
                     >
                       <ShoppingCart className="h-5 w-5" />
                       {options.length > 1 ? `Add ${PROFILE_LABEL[current.profile]} kit to cart` : "Add kit to cart"}
                     </button>
+                    {current.status === "over_budget" && (
+                      <p className="-mt-2 text-center text-xs text-red-600">{OVER_BUDGET_REASON}</p>
+                    )}
                     <p className="-mt-2 text-center text-xs text-gray-400">
                       The cart shows list prices; Kitly&apos;s voucher savings are listed above.
                     </p>

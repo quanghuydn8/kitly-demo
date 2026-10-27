@@ -7,10 +7,14 @@ import { kitSample } from "@/contract/fixtures";
 import { getAdapter, resetAdapterForTests } from "@/server/adapter";
 import { FakeLLM, setLLMForTests } from "@/server/llm";
 import { diffPlans, keepPlanKeys } from "@/server/kit/refine";
+import { normalizePlan, type PlannerOutput } from "@/server/kit/planner";
 import { today } from "@/server/today";
 import { POST } from "@/app/api/kit/refine/route";
 
-const HERO_PLAN: KitPlan = kitSample.flatMap((e) => (e.event === "plan" ? [e.data.plan] : []))[0];
+// A previous plan in real life already went through planKit's normalisation (F1: context tags are never must-haves).
+const HERO_PLAN: KitPlan = normalizePlan(
+  kitSample.flatMap((e) => (e.event === "plan" ? [e.data.plan] : []))[0] as unknown as PlannerOutput,
+);
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
 
 const post = (body: unknown) =>
@@ -117,7 +121,7 @@ describe("POST /api/kit/refine", () => {
     expect(facts.grandTotal).toBe(new Intl.NumberFormat("vi-VN").format(options![0].grandTotal) + "₫");
   });
 
-  it("records a new intent session + demand rows (demand counts include refinements)", async () => {
+  it("F3: records a new intent session (so refine can continue) but NO demand rows", async () => {
     const msg = "School gives the uniform, cut the budget to 1M.";
     const { planEv } = await refine(noUniform1M(), msg);
     const session = await getAdapter().getIntentSession(planEv.sessionId);
@@ -125,8 +129,10 @@ describe("POST /api/kit/refine", () => {
     const rows = (await getAdapter().demandItemsSince(`${today()}T00:00:00.000Z`)).filter(
       (r) => r.sessionId === planEv.sessionId,
     );
-    expect(rows).toHaveLength(8);
-    expect(rows.map((r) => r.needLabel)).not.toContain(HERO_PLAN.items.find((i) => i.key === "uniform")!.needLabel);
+    expect(rows).toHaveLength(0);
+    // the demand table only holds the original /api/kit session's rows, none from refine
+    const all = await getAdapter().demandItemsSince(`${today()}T00:00:00.000Z`);
+    expect(all.some((r) => r.sessionId === planEv.sessionId)).toBe(false);
   });
 
   it("added item shows in diff.added; unchanged keys are preserved", async () => {

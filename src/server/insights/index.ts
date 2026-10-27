@@ -53,9 +53,16 @@ export async function getSellerInsights(
     adapter.countDemandWatches(classified.map((g) => g.key)),
   ]);
 
+  // F4: inside one shop, what the seller can fix themselves (listing gaps) comes before what needs new stock.
+  // Stable sort, so each group keeps the thisWeek-desc order from aggregation. "all" keeps thisWeek order.
+  const ordered =
+    shopId === "all"
+      ? classified
+      : [...classified].sort((a, b) => Number(a.type === "assortment_gap") - Number(b.type === "assortment_gap"));
+
   return {
     window,
-    gaps: classified.map((g) => ({ ...g, advice: advice.get(g.key)!, watchers: watchers[g.key] ?? 0 })),
+    gaps: ordered.map((g) => ({ ...g, advice: advice.get(g.key)!, watchers: watchers[g.key] ?? 0 })),
     combos: agg.combos,
     topNeeds: agg.topNeeds,
   };
