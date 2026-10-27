@@ -115,12 +115,19 @@ export async function* kitStream(src: PlanSource, profiles: Profile[], deps: Kit
 
     yield step("explain", "running");
     const deltas = explainKit(deps.llm, plan, options, src.previous && diff ? { previous: src.previous, diff } : undefined);
-    for (;;) {
-      const next = await llmCall(() => deltas.next());
-      if (next.done) break;
-      if (next.value) yield { event: "explanation", data: { delta: next.value } };
+    // The basket is already on screen: an explainer failure (proxy stall/timeout) ends the step, not the kit.
+    let explained = true;
+    try {
+      for (;;) {
+        const next = await deltas.next();
+        if (next.done) break;
+        if (next.value) yield { event: "explanation", data: { delta: next.value } };
+      }
+    } catch (e) {
+      console.error("[kit] explainer failed:", e);
+      explained = false;
     }
-    yield step("explain", "done");
+    yield explained ? step("explain", "done") : step("explain", "done", "Explanation unavailable");
     yield { event: "done", data: { sessionId } };
   } catch (e) {
     console.error("[kit] pipeline failed:", e);

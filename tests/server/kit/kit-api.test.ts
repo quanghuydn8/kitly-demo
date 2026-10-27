@@ -223,7 +223,7 @@ describe("POST /api/kit", () => {
     expect(evs[1].data).toMatchObject({ code: "llm_error" });
   });
 
-  it("an explainer failure after the options still ends with an error event", async () => {
+  it("an explainer failure after the options keeps the basket: explain step done (unavailable) then done", async () => {
     const broken = new FakeLLM({ structured: [HERO_PLAN] });
     broken.stream = async function* () {
       yield "Partial ";
@@ -231,9 +231,12 @@ describe("POST /api/kit", () => {
     };
     setLLMForTests(broken);
     const evs = await readEvents(await post({ query: "Grade 1 kit" }));
+    // Probe 28/10: the proxy stalled mid-explanation once on Vercel — the kit is already on screen, so the
+    // explanation is optional: never turn a finished basket into an error.
     expect(shape(evs)).toContain("options");
-    expect(evs.at(-1)!.event).toBe("error");
-    expect(evs.at(-1)!.data).toMatchObject({ code: "llm_error" });
+    expect(evs.some((e) => e.event === "error")).toBe(false);
+    expect(evs.at(-1)!.event).toBe("done");
+    expect(evs.find((e) => e.event === "step" && (e.data as { id: string; status: string }).id === "explain" && (e.data as { status: string }).status === "done")!.data).toMatchObject({ detail: "Explanation unavailable" });
   });
 
   it("rejects an invalid body with a 400 contract error (JSON, not SSE)", async () => {
