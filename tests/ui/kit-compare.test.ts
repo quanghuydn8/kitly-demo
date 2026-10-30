@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import kitSample from "@/contract/fixtures/kit.sample.json";
 import { KitStreamSchema, type BasketOption } from "@/contract";
-import { basketTabs, defaultTabId } from "@/lib/client/kit-compare";
+import { basketTabs, defaultTabId, differenceLine } from "@/lib/client/kit-compare";
 
 const events = KitStreamSchema.parse(kitSample);
 const options = events.flatMap((e) => (e.event === "options" ? e.data.options : []));
@@ -39,5 +39,42 @@ describe("basketTabs", () => {
   it("defaults to the first tab when there is no Balanced option", () => {
     const tabs = basketTabs([saver, premium]);
     expect(defaultTabId(tabs)).toBe(tabs[0].id);
+  });
+});
+
+describe("differenceLine (20b)", () => {
+  const label = (key: string) =>
+    ({ notebooks: "Notebooks", pencils: "Pencils & pens", uniform: "Uniform shirt", shoes: "School shoes", "lunch-box": "Lunch box",
+       "pencil-case": "Pencil case", crayons: "Crayons", "water-bottle": "Water bottle" })[key] ?? key;
+
+  it("Saver vs Balanced: signed total difference and the items whose product differs", () => {
+    expect(differenceLine(saver, balanced, label)).toBe("−64.300 ₫, cheaper notebooks, pencils & pens and uniform shirt");
+  });
+
+  it("Premium vs Balanced: names at most 3 items, then 'N more'", () => {
+    expect(differenceLine(premium, balanced, label)).toBe(
+      "+539.000 ₫, higher-rated pencil case, crayons, water bottle and 2 more",
+    );
+  });
+
+  it("one or two differing items read naturally; identical or Balanced itself ⇒ null", () => {
+    const one: BasketOption = {
+      ...balanced,
+      profile: "saver",
+      grandTotal: balanced.grandTotal - 26000,
+      lines: balanced.lines.map((l) => (l.itemKey === "pencils" ? { ...l, product: { ...l.product, id: "cheap-pens" } } : l)),
+    };
+    expect(differenceLine(one, balanced, label)).toBe("−26.000 ₫, cheaper pencils & pens");
+    expect(differenceLine(balanced, balanced, label)).toBeNull();
+    expect(differenceLine({ ...balanced, profile: "premium" }, balanced, label)).toBeNull();
+  });
+
+  it("same total but other products says so; a missing item counts as a difference", () => {
+    const swapped: BasketOption = {
+      ...balanced,
+      profile: "premium",
+      lines: balanced.lines.filter((l) => l.itemKey !== "shoes"),
+    };
+    expect(differenceLine(swapped, balanced, label)).toBe("same total, higher-rated school shoes");
   });
 });

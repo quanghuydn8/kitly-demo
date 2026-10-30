@@ -20,7 +20,7 @@ import {
   type KitVersion,
   type Profile,
 } from "@/contract";
-import { basketTabs, defaultTabId } from "@/lib/client/kit-compare";
+import { basketTabs, defaultTabId, differenceLine } from "@/lib/client/kit-compare";
 import { closestMatchLabel, parseBudgetInput } from "@/lib/client/kit-edits";
 import { kAmount, missingLabel, noMatchSentence, overMaxLabel } from "@/lib/client/kit-text";
 import { formatCount, formatShortDate, formatVnd } from "@/lib/client/format";
@@ -333,6 +333,12 @@ function VersionBody({
   const option = overrides[key] ?? base;
   const needLabel = (itemKey: string) => v.plan.items.find((i) => i.key === itemKey)?.needLabel ?? itemKey;
   const over = option.status === "over_budget";
+  // 20b: one line under the tabs on how the shown basket differs from Balanced (none on a tab holding Balanced).
+  const balancedBase = v.options.find((o) => o.profile === "balanced");
+  const diffLine =
+    tab && balancedBase && !tab.profiles.includes("balanced")
+      ? differenceLine(option, overrides[`${v.version}:balanced`] ?? balancedBase, needLabel)
+      : null;
   const exact = option.noMatch.filter((n) => n.closest);
   const notInStore = option.noMatch.filter((n) => !n.closest);
   // 💛 cards (D40): from the shown option, never for a product that is already the item's line.
@@ -379,6 +385,11 @@ function VersionBody({
             );
           })}
         </div>
+      )}
+      {diffLine && (
+        <p data-testid="basket-diff" className="text-xs text-gray-600">
+          vs Balanced: {diffLine}
+        </p>
       )}
 
       {over && (

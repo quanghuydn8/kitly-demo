@@ -54,3 +54,34 @@ export function basketTabs(options: BasketOption[]): BasketTab[] {
 export function defaultTabId(tabs: BasketTab[]): string | null {
   return (tabs.find((t) => t.profiles.includes("balanced")) ?? tabs[0])?.id ?? null;
 }
+
+const HOW: Record<Profile, string> = { saver: "cheaper", balanced: "other", premium: "higher-rated" };
+
+/** "a", "a and b", "a, b and c", "a, b, c and 2 more" (at most 3 names). */
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names.join("");
+  if (names.length > 3) return `${names.slice(0, 3).join(", ")} and ${names.length - 3} more`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+/**
+ * 20b: one line on how a basket differs from Balanced, e.g. "−26.000 ₫, cheaper pencils & pens" or
+ * "+380.000 ₫, higher-rated school shoes and lunch box". Differing items = item keys whose product differs or that
+ * only one basket has, in plan (line) order. Null for Balanced itself or a basket identical to it.
+ */
+export function differenceLine(option: BasketOption, balanced: BasketOption, needLabel: (itemKey: string) => string): string | null {
+  if (option.profile === "balanced") return null;
+  const productOf = (o: BasketOption) => new Map(o.lines.map((l) => [l.itemKey, `${l.product.id}x${l.quantity}`]));
+  const mine = productOf(option);
+  const theirs = productOf(balanced);
+  const keys = [...new Set([...theirs.keys(), ...mine.keys()])].filter((k) => mine.get(k) !== theirs.get(k));
+  const delta = option.grandTotal - balanced.grandTotal;
+  if (!keys.length && delta === 0) return null;
+  const money = delta === 0 ? "same total" : `${delta < 0 ? "−" : "+"}${formatVnd(Math.abs(delta))}`;
+  if (!keys.length) return money;
+  const names = keys.map((k) => {
+    const s = needLabel(k);
+    return s.charAt(0).toLowerCase() + s.slice(1);
+  });
+  return `${money}, ${HOW[option.profile]} ${listNames(names)}`;
+}
