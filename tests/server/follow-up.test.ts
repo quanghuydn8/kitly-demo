@@ -93,6 +93,19 @@ describe("followUp: the guard (CONTRACT §1)", () => {
     expect(badSuggestion.source).toBe("template");
   });
 
+  it("the buyer's own limits (a plan item's maxUnitPrice) are allowed: 'under 400k' is the buyer's number, not invented", async () => {
+    // rehearsal 2 (31/10): the real model wrote "balo chống gù dưới 400.000₫" in 8/8 hero runs and every one fell back to the template
+    const input = await heroInput("vi");
+    expect(input.plan.items.some((i) => i.maxUnitPrice === 400_000)).toBe(true);
+    const ok = await run(
+      llmOut("Còn 3 ngày đến hạn, bạn muốn mình tìm balo chống gù dưới 400.000₫ có giao nhanh không?", [{ text: "Tìm balo dưới 400k" }, { text: "Ưu tiên giao nhanh" }]),
+      input,
+    );
+    expect(ok.source).toBe("llm");
+    const bad = await run(llmOut("Tìm balo dưới 350k nhé?", [{ text: "Có" }, { text: "Không" }]), input);
+    expect(bad.source).toBe("template");
+  });
+
   it("an unknown voucher code ⇒ template; a known code not in the context ⇒ template", async () => {
     const input = await heroInput();
     expect((await run(llmOut("Use SALE20 to save more?", [{ text: "Yes" }, { text: "No" }]), input)).source).toBe("template");

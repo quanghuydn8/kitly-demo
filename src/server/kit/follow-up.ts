@@ -110,7 +110,9 @@ function allowedFacts(input: FollowUpInput) {
   for (const label of [...c.walletVouchers.map((v) => v.label), ...c.favoriteShopPromos.map((p) => p.label)]) {
     for (const n of amountsIn(label)) add(n);
   }
+  // the buyer's own numbers (budget, per-item max price) are facts too: "under 400k" quotes the buyer, it is not invented
   add(plan.budget);
+  for (const item of plan.items) add(item.maxUnitPrice);
   if (o) {
     for (const n of [o.itemsTotal, o.shippingTotal, o.discountTotal, o.grandTotal, o.overBy, o.minimumCost]) add(n);
     for (const s of o.savings) add(s.amount);
