@@ -13,6 +13,8 @@ import { commerceAdapterContract } from "./contracts/commerce-adapter";
 import { kitStoreContract } from "./contracts/kit-store";
 import { adviceStoreContract } from "./contracts/advice-store";
 import { SupabaseAdviceStore } from "@/server/advicestore/supabase";
+import { watchStoreContract } from "./contracts/watch-store";
+import { SupabaseWatchStore } from "@/server/watchstore/supabase";
 import { expectPlantedFacts } from "./seed-planted-facts";
 
 const skip = !process.env.SUPABASE_URL;
@@ -48,6 +50,18 @@ adviceStoreContract(
     make: () => new SupabaseAdviceStore(),
     cleanup: async (prefix) => {
       const { error } = await supabaseClient().from("insight_advice").delete().like("gap_key", `${prefix}%`);
+      if (error) throw new Error(error.message);
+    },
+  },
+  { skip },
+);
+
+watchStoreContract(
+  "SupabaseWatchStore",
+  {
+    make: () => new SupabaseWatchStore(),
+    cleanup: async (prefix) => {
+      const { error } = await supabaseClient().from("demand_watches").delete().like("gap_key", `${prefix}%`);
       if (error) throw new Error(error.message);
     },
   },

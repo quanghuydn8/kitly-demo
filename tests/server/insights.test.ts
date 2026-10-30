@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import { InsightsResponseSchema, type Gap, type PlanItem } from "@/contract";
 import { InMemoryAdapter } from "@/server/adapter/in-memory";
 import { InMemoryAdviceStore } from "@/server/advicestore/in-memory";
+import { InMemoryWatchStore } from "@/server/watchstore/in-memory";
 import { FakeLLM } from "@/server/llm";
 import { buildInsights, UnknownShopError } from "@/server/insights";
 
@@ -18,9 +19,10 @@ function setup(structured: unknown[] = []) {
   const adapter = new InMemoryAdapter();
   const llm = new FakeLLM({ structured });
   const store = new InMemoryAdviceStore();
+  const watches = new InMemoryWatchStore();
   const run = async (shopId: string) =>
-    InsightsResponseSchema.parse(await buildInsights({ adapter, llm, advice: store, today: TODAY }, shopId));
-  return { adapter, llm, store, run };
+    InsightsResponseSchema.parse(await buildInsights({ adapter, llm, advice: store, watches, today: TODAY }, shopId));
+  return { adapter, llm, store, watches, run };
 }
 
 const item = (needLabel: string, category: string | null, tags: string[] = []): PlanItem => ({
@@ -340,5 +342,19 @@ describe("buildInsights: recent (D35)", () => {
     const { adapter, run } = setup();
     for (let i = 0; i < 12; i++) await session(adapter, [item(`Live need ${i}`, null)], { source: "live" });
     expect((await run("shop-trailhead")).recent).toHaveLength(10);
+  });
+});
+
+describe("buildInsights: watchers (Full, ticket 07)", () => {
+  it("each gap carries its watch count; unwatched gaps 0; watches on other keys ignored", async () => {
+    const { watches, run } = setup();
+    await watches.add("kids-raincoat|backpack-cover");
+    await watches.add("kids-raincoat|backpack-cover");
+    await watches.add("not-a-visible|gap");
+    const res = await run("all");
+    const byKey = new Map(res.gaps.map((g) => [g.key, g.watchers]));
+    expect(byKey.get("kids-raincoat|backpack-cover")).toBe(2);
+    expect(byKey.get("school-backpack|anti-hunchback")).toBe(0);
+    expect(res.gaps.every((g) => typeof g.watchers === "number")).toBe(true);
   });
 });

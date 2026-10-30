@@ -1,9 +1,11 @@
 // Seller insights (CONTRACT §3 GET /api/seller/insights, seam S3): demand rows → visible gaps (thisWeek ≥ 3),
 // classified listing / assortment for the shop, sorted, top 8, each with cached advice; + combos, top needs and
-// the live "Just searched" strip (D35). All marketplace data via the CommerceAdapter; all LLM calls via LLMClient.
+// the live "Just searched" strip (D35); Full: `watchers` = Notify-me watches per gap key (ticket 07).
+// All marketplace data via the CommerceAdapter; all LLM calls via LLMClient.
 import type { CommerceAdapter, InsightsResponse, Product } from "@/contract";
 import type { AdviceStore } from "@/server/advicestore";
 import type { LLMClient } from "@/server/llm";
+import type { WatchStore } from "@/server/watchstore";
 import { adviceFor } from "./advice";
 import { aggregate, insightWindow, UNMET_BELOW, VISIBLE_FROM, type GapStats } from "./aggregate";
 import { classifyGaps, type Classification, type JudgeCache } from "./classify";
@@ -25,6 +27,7 @@ export interface InsightsDeps {
   adapter: CommerceAdapter;
   llm: LLMClient;
   advice: AdviceStore;
+  watches: WatchStore;
   today: string;
   judgeCache?: JudgeCache;
 }
@@ -63,7 +66,10 @@ export async function buildInsights(deps: InsightsDeps, shopId: string): Promise
   ranked = ranked.map((g) => ({ ...g, ...classes.get(g.key)! }));
   if (shopId !== "all") ranked = ranked.sort(listingFirst).slice(0, MAX_GAPS);
 
-  const advice = await adviceFor(ranked, llm, deps.advice);
+  const [advice, watchers] = await Promise.all([
+    adviceFor(ranked, llm, deps.advice),
+    deps.watches.counts(ranked.map((g) => g.key)),
+  ]);
   const gaps: InsightsResponse["gaps"] = ranked.map((g, i) => ({
     key: g.key,
     type: g.type ?? "assortment_gap",
@@ -78,6 +84,7 @@ export async function buildInsights(deps: InsightsDeps, shopId: string): Promise
     advice: advice[i],
     ...(g.type === "listing_gap" ? { candidates: g.candidates ?? [] } : {}),
     appliedFix: g.appliedFix ?? null,
+    watchers: watchers.get(g.key) ?? 0,
   }));
 
   const recent = live

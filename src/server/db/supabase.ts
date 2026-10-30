@@ -1,5 +1,5 @@
 // The one supabase-js client (server only, service-role key), bound to KITLY_DB_SCHEMA.
-// Only the Supabase implementations (adapter, kitstore, advicestore) use it — Kitly modules never do.
+// Only the Supabase implementations (adapter, kitstore, advicestore, watchstore) use it — Kitly modules never do.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { kitlySchema } from "./schema";
 
