@@ -36,16 +36,26 @@ export function must<T = any>(
 }
 
 /** PostgREST caps a response at 1,000 rows: page with .range() until a short page. */
+/** Pages asked at once: 4 × 1,000 rows (rehearsal 2: 7 pages one after another took 2.3 s for the seller insights). */
+export const FETCH_PARALLEL = 4;
+
 export async function fetchAll<T>(
   page: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
   what: string,
   size = 1000,
 ): Promise<T[]> {
+  // one retry per page: a free-tier DB under load sometimes cancels one statement ("statement timeout")
+  const read = async (from: number): Promise<T[]> => {
+    const first = await page(from, from + size - 1);
+    return must<T[]>(first.error ? await page(from, from + size - 1) : first, what);
+  };
   const out: T[] = [];
-  for (let from = 0; ; from += size) {
-    const rows = must<T[]>(await page(from, from + size - 1), what);
-    out.push(...rows);
-    if (rows.length < size) return out;
+  for (let base = 0; ; base += size * FETCH_PARALLEL) {
+    const pages = await Promise.all(Array.from({ length: FETCH_PARALLEL }, (_, k) => read(base + k * size)));
+    for (const rows of pages) {
+      out.push(...rows);
+      if (rows.length < size) return out; // later pages of this batch are past the end (empty)
+    }
   }
 }
 
