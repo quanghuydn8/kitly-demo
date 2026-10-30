@@ -12,6 +12,7 @@ export interface OpenAILLMOptions {
   apiKey?: string;
   baseURL?: string;
   streamIdleMs?: number;
+  serviceTier?: string;
 }
 
 const STREAM_IDLE_MS = 20_000;
@@ -30,6 +31,8 @@ function outputText(response: { output?: unknown[] }): string {
 export class OpenAILLM implements LLMClient {
   private client: OpenAI;
   private streamIdleMs: number;
+  /** OpenAI `service_tier` ("fast" = Fast mode, MODELS.md 30/10); "" = not sent, so proxies never see it. */
+  private serviceTier: string;
 
   constructor(opts: OpenAILLMOptions = {}) {
     this.client = new OpenAI({
@@ -39,6 +42,11 @@ export class OpenAILLM implements LLMClient {
       maxRetries: 1,
     });
     this.streamIdleMs = opts.streamIdleMs ?? STREAM_IDLE_MS;
+    this.serviceTier = opts.serviceTier ?? process.env.KITLY_SERVICE_TIER ?? "";
+  }
+
+  private tier(): { service_tier?: "fast" } {
+    return this.serviceTier ? { service_tier: this.serviceTier as "fast" } : {};
   }
 
   async structured<T>(
@@ -52,6 +60,7 @@ export class OpenAILLM implements LLMClient {
       input: messages,
       text: { format: zodTextFormat(schema as never, opts.name ?? "output") },
       ...(opts.effort ? { reasoning: { effort: opts.effort } } : {}),
+      ...this.tier(),
     });
     return schema.parse(JSON.parse(outputText(response)));
   }
@@ -61,9 +70,10 @@ export class OpenAILLM implements LLMClient {
     const onOuterAbort = () => controller.abort();
     opts.signal?.addEventListener("abort", onOuterAbort);
     const client = this.client;
+    const tier = this.tier();
     async function* deltas(): AsyncGenerator<string> {
       const events = await client.responses.create(
-        { model, input: messages, stream: true, ...(opts.effort ? { reasoning: { effort: opts.effort } } : {}) },
+        { model, input: messages, stream: true, ...(opts.effort ? { reasoning: { effort: opts.effort } } : {}), ...tier },
         { signal: controller.signal },
       );
       for await (const event of events) {

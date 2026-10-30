@@ -75,6 +75,23 @@ describe("OpenAILLM.structured", () => {
     expect(lastBody).not.toHaveProperty("reasoning");
   });
 
+  // MODELS.md (30/10): service_tier "fast" cut the planner from ~9 s to ~6 s; empty = not sent (proxies may reject it)
+  it("sends service_tier only when configured (option, else KITLY_SERVICE_TIER)", async () => {
+    handler = (_b, res) =>
+      res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(jsonResponse('{"items":[]}')));
+    await new OpenAILLM({ apiKey: "test", baseURL, serviceTier: "fast" }).structured("m", Plan, [{ role: "user", content: "x" }]);
+    expect(lastBody.service_tier).toBe("fast");
+    await new OpenAILLM({ apiKey: "test", baseURL, serviceTier: "" }).structured("m", Plan, [{ role: "user", content: "x" }]);
+    expect(lastBody).not.toHaveProperty("service_tier");
+    process.env.KITLY_SERVICE_TIER = "fast";
+    try {
+      await new OpenAILLM({ apiKey: "test", baseURL }).structured("m", Plan, [{ role: "user", content: "x" }]);
+      expect(lastBody.service_tier).toBe("fast");
+    } finally {
+      delete process.env.KITLY_SERVICE_TIER;
+    }
+  });
+
   it("rejects output that does not match the schema", async () => {
     handler = (_b, res) =>
       res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(jsonResponse('{"items":"nope"}')));
@@ -101,6 +118,18 @@ describe("OpenAILLM.stream", () => {
     expect(parts.join("")).toBe("Hello Lan");
     expect(lastBody.stream).toBe(true);
     expect(lastBody.reasoning).toEqual({ effort: "low" });
+  });
+
+  it("streams with service_tier when configured", async () => {
+    handler = (_b, res) => {
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      sse(res, "response.output_text.delta", { delta: "ok", item_id: "m", output_index: 0, content_index: 0 });
+      sse(res, "response.completed", { response: { id: "r", status: "completed", output: [] } });
+      res.end();
+    };
+    const llm = new OpenAILLM({ apiKey: "test", baseURL, serviceTier: "fast" });
+    for await (const _ of llm.stream("m", [{ role: "user", content: "hi" }])) void _;
+    expect(lastBody.service_tier).toBe("fast");
   });
 
   it("aborts with LLMTimeoutError when no delta arrives within the idle window", async () => {
