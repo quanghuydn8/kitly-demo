@@ -29,6 +29,10 @@ describe("streamExplanation", () => {
     const [system, user] = llm.calls[0].messages;
     expect(system.role).toBe("system");
     expect(system.content).toContain("70 words");
+    // rehearsal 2 (31/10): 14 real explanations ran 66–102 words — the prompt asked for more than fits; aim lower, fixed shape
+    expect(system.content).toMatch(/aim for about 50 words/i);
+    expect(system.content).toMatch(/3 sentences/);
+    expect(system.content).toMatch(/do not list the items/i);
     expect(system.content).toContain("4 sentences");
     expect(system.content).toMatch(/English/);
     expect(user.content).toContain("1.500.000₫"); // budget

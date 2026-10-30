@@ -80,13 +80,14 @@ export function explainerMessages(
   const lang = plan.language === "vi" ? "Vietnamese" : "English";
   const system = [
     `You explain a shopping kit to the buyer in ${lang}. Plain text, no markdown, no lists.`,
-    "Hard limit: at most 70 words and at most 4 sentences.",
-    "Say the total against the budget, the main savings, and every gap honestly.",
+    "Hard limit: at most 70 words and at most 4 sentences. Aim for about 50 words in 3 sentences:",
+    "the total against the budget and the biggest saving; every gap honestly; one last useful fact.",
+    "Do not list the items of the basket (the buyer sees them on the right).",
     'For a gap with a closest product, name it and what it lacks (e.g. "closest: Minh An Kids Backpack, missing anti-hunchback").',
     "Use only the facts and numbers given; never invent products, prices or dates. Money format: 1.500.000₫.",
     ...(changes ? ["This is a revised kit: start with what changed (from the facts), then say the new total."] : []),
     ...(comparison.length
-      ? ["Describe the Balanced basket, then add one short line on how Saver and Premium differ (from the other-baskets facts), still within the limit."]
+      ? ["The last sentence is one short sentence on how Saver and Premium differ (from the other-baskets facts), still within the limit."]
       : []),
     ...(sales ? ["You may mention the wallet saving or the cart product; only these numbers."] : []),
   ].join("\n");
