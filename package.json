@@ -12,6 +12,7 @@
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "e2e": "playwright test",
+    "eval": "tsx --env-file-if-exists=.env scripts/eval.ts",
     "db:migrate": "tsx --env-file-if-exists=.env scripts/db-migrate.ts",
     "seed": "tsx --env-file-if-exists=.env scripts/seed.ts",
     "test:supabase": "KITLY_TEST_SUPABASE=1 vitest run"
