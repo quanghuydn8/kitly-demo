@@ -165,12 +165,23 @@ function textIsGrounded(text: string, facts: ReturnType<typeof allowedFacts>): b
   return amountsIn(noDates).every((n) => facts.numbers.has(n));
 }
 
+/** Cut at a word boundary to at most `max` characters. */
+function shorten(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max + 1);
+  const at = cut.lastIndexOf(" ");
+  return (at > 0 ? cut.slice(0, at) : text.slice(0, max)).trimEnd();
+}
+
 /** The model's follow-up if it passes the guard (with code-made swap actions), else null. */
 export function guardFollowUp(raw: FollowUpOutput, input: FollowUpInput): FollowUp | null {
   const question = raw.question.trim();
   if (!question.endsWith("?")) return null;
+  const interestKeys = new Set((input.option?.interests ?? []).map((i) => i.itemKey));
   const suggestions = raw.suggestions
     .map((s) => ({ ...s, text: s.text.trim() }))
+    // a swap pill names a product title, which can push it past the limit: shorten it instead of dropping it (rehearsal 2)
+    .map((s) => (s.interestItemKey && interestKeys.has(s.interestItemKey) ? { ...s, text: shorten(s.text, MAX_SUGGESTION) } : s))
     .filter((s) => s.text.length > 0 && s.text.length <= MAX_SUGGESTION)
     .slice(0, 3);
   if (suggestions.length < 2) return null;

@@ -123,6 +123,20 @@ describe("followUp: the guard (CONTRACT §1)", () => {
     expect(bad.source).toBe("template");
   });
 
+  // rehearsal 2 (31/10): "Switch to KidZone Lite Backpack Grade 1–3" is 41 chars → dropped → 1 pill left → whole follow-up
+  // replaced by the template (2 of 8 real answer turns)
+  it("an over-long swap pill is shortened at a word boundary (≤ 40 chars), not dropped", async () => {
+    const input = await heroInput();
+    const out = await run(
+      llmOut("Need express delivery?", [{ text: "Switch to KidZone Lite Backpack Grade 1–3", interestItemKey: "backpack" }, { text: "Express delivery" }]),
+      input,
+    );
+    expect(out.source).toBe("llm");
+    expect(out.suggestions[0].text).toBe("Switch to KidZone Lite Backpack Grade");
+    expect(out.suggestions[0].text.length).toBeLessThanOrEqual(40);
+    expect(out.suggestions[0].action).toMatchObject({ type: "swap", itemKey: "backpack" });
+  });
+
   it("an unknown voucher code ⇒ template; a known code not in the context ⇒ template", async () => {
     const input = await heroInput();
     expect((await run(llmOut("Use SALE20 to save more?", [{ text: "Yes" }, { text: "No" }]), input)).source).toBe("template");
