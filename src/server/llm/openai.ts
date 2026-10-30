@@ -1,10 +1,12 @@
 // OpenAILLM: the only place that talks to OpenAI. Honours OPENAI_BASE_URL (proxies in rehearsal).
 // Streaming iterates raw `responses.create({ stream: true })` events — never the SDK's responses.stream() helper,
-// which breaks on proxies that rewrite response ids. A stream aborts when no delta arrives for streamIdleMs.
+// which breaks on proxies that rewrite response ids. A stream aborts when no delta arrives for streamIdleMs
+// (withIdleTimeout).
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { z } from "zod";
-import { LLMTimeoutError, type LLMClient, type LLMMessage, type StreamOptions, type StructuredOptions } from "./types";
+import { withIdleTimeout } from "./idle";
+import { type LLMClient, type LLMMessage, type StreamOptions, type StructuredOptions } from "./types";
 
 export interface OpenAILLMOptions {
   apiKey?: string;
@@ -58,24 +60,14 @@ export class OpenAILLM implements LLMClient {
     const controller = new AbortController();
     const onOuterAbort = () => controller.abort();
     opts.signal?.addEventListener("abort", onOuterAbort);
-    let stalled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const arm = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        stalled = true;
-        controller.abort();
-      }, this.streamIdleMs);
-    };
-    try {
-      arm();
-      const events = await this.client.responses.create(
+    const client = this.client;
+    async function* deltas(): AsyncGenerator<string> {
+      const events = await client.responses.create(
         { model, input: messages, stream: true, ...(opts.effort ? { reasoning: { effort: opts.effort } } : {}) },
         { signal: controller.signal },
       );
       for await (const event of events) {
         if (event.type === "response.output_text.delta") {
-          arm();
           yield event.delta;
         } else if (event.type === "response.failed" || event.type === "error") {
           const msg = event.type === "error" ? event.message : (event.response.error?.message ?? "LLM response failed");
@@ -84,13 +76,11 @@ export class OpenAILLM implements LLMClient {
           return;
         }
       }
-      // The SDK ends the iterator quietly when aborted, so a stall must be detected here too.
-      if (stalled) throw new LLMTimeoutError(`no LLM delta for ${this.streamIdleMs} ms`);
-    } catch (err) {
-      if (stalled) throw new LLMTimeoutError(`no LLM delta for ${this.streamIdleMs} ms`);
-      throw err;
+    }
+    try {
+      // The idle window also covers the wait for the first event (a proxy can hang before sending headers).
+      yield* withIdleTimeout(deltas(), this.streamIdleMs, () => controller.abort());
     } finally {
-      clearTimeout(timer);
       opts.signal?.removeEventListener("abort", onOuterAbort);
     }
   }

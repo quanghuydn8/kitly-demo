@@ -1,5 +1,6 @@
 // FakeLLM: the only allowed LLM fake in tests. Returns queued structured outputs (validated with the caller's
 // schema, an Error entry rejects) and streams queued text; records every call with its model and effort.
+// A stream answer may contain an Error after some deltas (`[["Partial ", new Error("stall")]]`): it throws there.
 import type { z } from "zod";
 import type { Effort, LLMClient, LLMMessage, StreamOptions, StructuredOptions } from "./types";
 
@@ -14,14 +15,14 @@ export interface FakeLLMCall {
 export class FakeLLM implements LLMClient {
   calls: FakeLLMCall[] = [];
   private structuredQueue: unknown[];
-  private streamQueue: (string[] | Error)[];
+  private streamQueue: ((string | Error)[] | Error)[];
 
-  constructor(opts: { structured?: unknown[]; stream?: string[] | (string[] | Error)[] } = {}) {
+  constructor(opts: { structured?: unknown[]; stream?: string[] | ((string | Error)[] | Error)[] } = {}) {
     this.structuredQueue = [...(opts.structured ?? [])];
     const s = opts.stream ?? [];
     // `stream: ["a", "b"]` = one streamed answer; `stream: [["a"], ["b"]]` = one answer per call.
     this.streamQueue =
-      s.length && s.every((x) => typeof x === "string") ? [s as string[]] : [...(s as (string[] | Error)[])];
+      s.length && s.every((x) => typeof x === "string") ? [s as string[]] : [...(s as ((string | Error)[] | Error)[])];
   }
 
   async structured<T>(
@@ -42,6 +43,9 @@ export class FakeLLM implements LLMClient {
     const next = this.streamQueue.length > 1 ? this.streamQueue.shift() : this.streamQueue[0];
     if (!next) return;
     if (next instanceof Error) throw next;
-    for (const d of next) yield d;
+    for (const d of next) {
+      if (d instanceof Error) throw d;
+      yield d;
+    }
   }
 }
