@@ -47,10 +47,24 @@ function messages(p: Product, gap: GapRef, allowed: string[]) {
       content: JSON.stringify({
         listing: { title: p.title, description: p.description, tags: p.tags, attributes: p.attributes },
         gapTags: gap.tags,
-        allowedTags: allowed.map((t) => (TAG_HINTS[t] ? `${t} (${TAG_HINTS[t]})` : t)),
+        // plain ids: "tag (hint)" strings were copied back as tag names (rehearsal 2) → hints go in their own field
+        allowedTags: allowed,
+        tagHints: Object.fromEntries(allowed.filter((t) => TAG_HINTS[t]).map((t) => [t, TAG_HINTS[t]])),
       }),
     },
   ];
+}
+
+/** Tags of a draft that are allowed and backed by a quote found in the listing text (first quote per tag). */
+function keptTags(draft: z.infer<typeof DraftSchema>, allowed: string[], text: string) {
+  const kept: { tag: string; evidence: string }[] = [];
+  for (const { tag: raw, evidence } of draft.tags) {
+    const tag = raw.split("(")[0].trim(); // a tag echoed with its hint still counts
+    const quote = norm(evidence);
+    if (!allowed.includes(tag) || kept.some((k) => k.tag === tag) || !quote || !text.includes(quote)) continue;
+    kept.push({ tag, evidence: evidence.trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, "") });
+  }
+  return kept;
 }
 
 export async function proposeEnrichment(
@@ -60,17 +74,16 @@ export async function proposeEnrichment(
 ): Promise<EnrichmentProposal> {
   const allowed = [...new Set([...gap.tags, ...deps.vocabulary])].filter((t) => !product.tags.includes(t));
   const { fast } = llmModels();
-  const draft = await deps.llm.structured(fast.model, DraftSchema, messages(product, gap, allowed), {
-    effort: fast.effort,
-    name: "enrichment_draft",
-  });
-
+  const draftOnce = () =>
+    deps.llm.structured(fast.model, DraftSchema, messages(product, gap, allowed), { effort: fast.effort, name: "enrichment_draft" });
   const text = norm([product.title, product.description, ...Object.values(product.attributes)].join(" \n "));
-  const kept: { tag: string; evidence: string }[] = [];
-  for (const { tag, evidence } of draft.tags) {
-    const quote = norm(evidence);
-    if (!allowed.includes(tag) || kept.some((k) => k.tag === tag) || !quote || !text.includes(quote)) continue;
-    kept.push({ tag, evidence: evidence.trim().replace(/^["'“”‘’]+|["'“”‘’]+$/g, "") });
+  let draft = await draftOnce();
+  let kept = keptTags(draft, allowed, text);
+  // the gap tag is what makes the listing match the need (Beat 4); a draft without it is asked again once
+  if (!kept.some((k) => gap.tags.includes(k.tag))) {
+    const again = await draftOnce();
+    const keptAgain = keptTags(again, allowed, text);
+    if (keptAgain.some((k) => gap.tags.includes(k.tag)) || keptAgain.length > kept.length) [draft, kept] = [again, keptAgain];
   }
   // evidence shown to the seller: the quote for the first gap tag kept, else the first kept quote
   const main = kept.find((k) => gap.tags.includes(k.tag)) ?? kept[0];

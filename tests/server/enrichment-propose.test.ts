@@ -31,6 +31,34 @@ describe("proposeEnrichment", () => {
     });
   });
 
+  // rehearsal 2 (31/10): allowedTags were sent as "anti-hunchback (hint…)" and 1 real draft in 8 copied that whole string
+  // as the tag name → every tag was dropped → Apply changed only the title and Beat 4's loop broke
+  it("allowedTags go to the model as plain tag ids (hints apart); a tag echoed with its hint still counts", async () => {
+    const llm = new FakeLLM({
+      structured: [
+        draft({
+          tags: [
+            { tag: "anti-hunchback (ergonomic back support / S-shaped straps that keep a child's spine straight)", evidence: SPINE },
+            { tag: "lightweight", evidence: "Weighs only 0.75 kg" },
+          ],
+        }),
+      ],
+    });
+    const p = await proposeEnrichment(await minhAn(), GAP, { llm, vocabulary: VOCAB });
+    expect(p.tags).toEqual(["anti-hunchback", "lightweight"]);
+    const user = JSON.parse(llm.calls[0].messages.at(-1)!.content as string);
+    expect(user.allowedTags).toEqual(expect.arrayContaining(["anti-hunchback", "lightweight", "grade-1"]));
+    expect(user.allowedTags.every((t: string) => /^[a-z0-9-]+$/.test(t))).toBe(true);
+  });
+
+  it("a draft that keeps none of the gap's tags is asked again once (the gap tag is what closes the Beat 4 loop)", async () => {
+    const noGapTag = draft({ tags: [{ tag: "lightweight", evidence: "Weighs only 0.75 kg" }] });
+    const llm = new FakeLLM({ structured: [noGapTag, draft()] });
+    const p = await proposeEnrichment(await minhAn(), GAP, { llm, vocabulary: VOCAB });
+    expect(llm.calls).toHaveLength(2);
+    expect(p.tags).toContain("anti-hunchback");
+  });
+
   it("drops tags not supported by evidence even if the LLM returns them", async () => {
     const llm = new FakeLLM({
       structured: [
