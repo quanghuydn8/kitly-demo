@@ -8,6 +8,8 @@ interface Thread {
   title: string;
   persona: PersonaId;
   updatedAt: string;
+  /** Write order, the tie-break when two writes share a millisecond (Postgres now() has microseconds; Date has ms). */
+  touched: number;
   versions: KitVersion[];
   messages: KitMessage[];
 }
@@ -25,6 +27,7 @@ const stamp = () => new Date().toISOString();
 
 export class InMemoryKitStore implements KitStore {
   private threads = new Map<string, Thread>();
+  private writes = 0;
 
   private owned(threadId: string, owner: string): Thread {
     const t = this.threads.get(threadId);
@@ -44,6 +47,7 @@ export class InMemoryKitStore implements KitStore {
       title: threadTitle(title),
       persona,
       updatedAt: stamp(),
+      touched: ++this.writes,
       versions: [],
       messages: [],
     });
@@ -55,6 +59,7 @@ export class InMemoryKitStore implements KitStore {
     const msg: KitMessage = { ...clone(m), createdAt: stamp() };
     t.messages.push(msg);
     t.updatedAt = msg.createdAt;
+    t.touched = ++this.writes;
     return clone(msg);
   }
 
@@ -63,6 +68,7 @@ export class InMemoryKitStore implements KitStore {
     const version: KitVersion = { ...clone(v), version: t.versions.length + 1, createdAt: stamp() };
     t.versions.push(version);
     t.updatedAt = version.createdAt;
+    t.touched = ++this.writes;
     return clone(version);
   }
 
@@ -76,7 +82,7 @@ export class InMemoryKitStore implements KitStore {
   async listThreads(owner: string): Promise<KitThreadSummary[]> {
     return [...this.threads.values()]
       .filter((t) => t.owner === owner)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.touched - a.touched)
       .slice(0, THREAD_LIST_MAX)
       .map((t) => this.summary(t));
   }
