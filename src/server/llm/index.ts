@@ -5,7 +5,7 @@ import type { LLMClient } from "./types";
 
 export * from "./types";
 export { OpenAILLM } from "./openai";
-export { FakeLLM, type FakeLLMCall } from "./fake";
+export { FakeLLM, FakeDelay, fakeDelay, type FakeLLMCall } from "./fake";
 export { llmModels } from "./models";
 export { withIdleTimeout } from "./idle";
 

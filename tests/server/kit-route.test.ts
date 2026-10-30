@@ -68,6 +68,7 @@ describe("POST /api/kit: hero sentence", () => {
       "options",
       "explain:running",
       "explain:done",
+      "followup",
       "done",
     ]);
     expect(names(evs).filter((n) => n === "explanation").length).toBe(3);
@@ -119,7 +120,7 @@ describe("POST /api/kit: hero sentence", () => {
     expect(v.plan).toEqual(dataOf(evs, "plan").plan);
     expect(v.diff).toBeNull();
     expect(v.selection).toBeNull();
-    expect(v.followUp).toBeNull();
+    expect(v.followUp).toEqual(dataOf(evs, "followup").followUp); // ticket 16: saved with the version
     expect(await getKitStore().getThread(threadId, "owner-b")).toBeNull();
   });
 
@@ -214,7 +215,8 @@ describe("POST /api/kit: failures", () => {
   it("planner fails once (invalid JSON) → retried, stream completes", async () => {
     const llm = new FakeLLM({ structured: ["{oops", sloppyHeroPlan()], stream: EXPLANATION });
     const { evs } = await runHero({ llm });
-    expect(llm.calls.filter((c) => c.kind === "structured")).toHaveLength(2);
+    // 2 planner calls (+ the ticket 16 follow-up call, which falls back to its template here)
+    expect(llm.calls.filter((c) => c.kind === "structured" && c.name !== "kit_followup")).toHaveLength(2);
     expect(names(evs).at(-1)).toBe("done");
     expect(names(evs)).not.toContain("error");
   });

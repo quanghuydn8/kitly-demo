@@ -9,6 +9,7 @@ import { shortDate } from "@/server/optimizer/labels";
 import { matchPlan } from "./matcher";
 import { diffPlans } from "./diff";
 import { ALL_PROFILES, demandRows } from "./pipeline";
+import { withInterests } from "./interests";
 
 /** A change the thread cannot take (unknown item / version, bad date or budget) → HTTP 400. */
 export class AdjustError extends Error {
@@ -179,10 +180,21 @@ export async function adjustKit(deps: AdjustDeps, req: AdjustRequest): Promise<K
     return store.appendVersion({ ...base, status: "awaiting_budget", options: [], explanation: "" }, req.owner);
   }
 
-  const [shops, vouchers] = await Promise.all([adapter.listShops(), adapter.listVouchers(thread.persona)]);
+  const [shops, vouchers, persona] = await Promise.all([
+    adapter.listShops(),
+    adapter.listVouchers(thread.persona),
+    adapter.getPersona(thread.persona),
+  ]);
   const match = await matchPlan(adapter, plan, { shops, today });
   const profiles = req.profiles?.length ? req.profiles : ALL_PROFILES;
-  const options = optimize({ plan, candidates: match.candidates, noMatch: match.noMatch, shops, vouchers, today }, profiles);
+  const options = withInterests(
+    optimize({ plan, candidates: match.candidates, noMatch: match.noMatch, shops, vouchers, today }, profiles),
+    plan,
+    match.pool,
+    persona,
+    vouchers,
+    today,
+  );
 
   // The budget answer to a clarify = the thread's first options: record its demand (once per thread).
   if (req.change.type === "set_budget" && latest.status === "awaiting_budget" && !demandRecorded(versions)) {

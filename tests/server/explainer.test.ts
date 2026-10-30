@@ -72,3 +72,28 @@ describe("streamExplanation: refine changes", () => {
     expect(llm.calls[0].messages.map((m) => m.content).join("\n")).not.toMatch(/what changed/i);
   });
 });
+
+describe("streamExplanation: sales context (ticket 16)", () => {
+  it("gets the SalesContext facts and the rule to cite only these numbers", async () => {
+    const llm = new FakeLLM({ stream: ["ok"] });
+    const sales = {
+      today: "2026-09-02",
+      deadline: "2026-09-05",
+      daysLeft: 3,
+      address: "Cau Giay, Hanoi",
+      interests: [
+        { itemKey: "backpack", title: "KidZone Lite Backpack Grade 1–3", price: 520_000, priceAfterVoucher: 440_000, voucherCode: "LAN-KZ80", overMaxPriceBy: 40_000 },
+      ],
+      walletVouchers: [{ code: "LAN-BTS10", label: "Back-to-school 10%", validUntil: "2026-09-04", daysToExpiry: 2, usedInBasket: true }],
+      freeshipGaps: [],
+      favoriteShopPromos: [],
+      hooks: ["deadline_soon" as const, "cart_interest" as const, "voucher_expiring" as const],
+    };
+    await collect(streamExplanation(llm, plan, balanced, undefined, undefined, sales));
+    const [system, user] = llm.calls[0].messages;
+    expect(system.content).toMatch(/may mention the wallet saving or the cart product; only these numbers/i);
+    expect(user.content).toContain("KidZone Lite Backpack Grade 1–3");
+    expect(user.content).toContain("440.000₫");
+    expect(user.content).toContain("LAN-KZ80");
+  });
+});

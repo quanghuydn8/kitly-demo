@@ -9,6 +9,9 @@ export type NoMatch = BasketOption["noMatch"][number];
 
 export interface MatchResult {
   candidates: Record<string, Candidate[]>; // itemKey → exact candidates, best score first (absent = none)
+  /** itemKey → every product of the item's category that is in stock and arrives by the deadline (the part that is
+   *  never relaxed), tags and price ignored. Feeds the 💛 cart interests (D40). */
+  pool: Record<string, Candidate[]>;
   noMatch: NoMatch[];
   matchedCount: Record<string, number>; // itemKey → exact candidates (demand_items.matched_count)
   compared: { products: number; shops: number }; // what the one catalog query returned
@@ -23,7 +26,7 @@ export function qualityScore(p: Product, s: Shop, it: PlanItem): number {
   return Math.round(Math.min(1, Math.max(0, score)) * 1e4) / 1e4;
 }
 
-function toCandidate(p: Product, s: Shop, it: PlanItem, today: string): Candidate {
+export function toCandidate(p: Product, s: Shop, it: PlanItem, today: string): Candidate {
   const wanted = [...it.mustHaveTags, ...it.niceToHaveTags];
   return {
     product: p,
@@ -48,6 +51,7 @@ export async function matchPlan(
 
   const result: MatchResult = {
     candidates: {},
+    pool: {},
     noMatch: [],
     matchedCount: {},
     compared: { products: products.length, shops: new Set(products.map((p) => p.shopId)).size },
@@ -67,6 +71,7 @@ export async function matchPlan(
       const c = toCandidate(p, s, it, opts.today);
       if (plan.deadline === null || c.arrivesBy <= plan.deadline) base.push(c);
     }
+    result.pool[it.key] = base;
     const hasTags = (c: Candidate) => it.mustHaveTags.every((t) => c.product.tags.includes(t));
     const inPrice = (c: Candidate) => it.maxUnitPrice === null || c.product.price <= it.maxUnitPrice;
     const exact = best(base.filter((c) => hasTags(c) && inPrice(c)));

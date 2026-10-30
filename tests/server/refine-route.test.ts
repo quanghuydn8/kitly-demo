@@ -61,6 +61,7 @@ describe("POST /api/kit/refine: remove uniform + budget 1M", () => {
       "options",
       "explain:running",
       "explain:done",
+      "followup",
       "done",
     ]);
     const plan = dataOf(evs, "plan");
@@ -86,7 +87,7 @@ describe("POST /api/kit/refine: remove uniform + budget 1M", () => {
       excludedKeys: [],
       diff: { added: [], removed: ["uniform"], changed: [] },
       selection: null,
-      followUp: null,
+      followUp: dataOf(evs, "followup").followUp, // ticket 16: refine versions carry the follow-up
       explanation: "Removed the uniform. New total fits 1M.",
     });
     expect(t.versions[1].plan).toEqual(plan.plan);
@@ -210,15 +211,16 @@ describe("POST /api/kit/refine: S6 diff", () => {
     expect(v3.excludedKeys).toEqual(["water-bottle"]);
   });
 
-  it("intent 'answer' is still handled as change_kit in this ticket (new version)", async () => {
+  it("intent 'answer' is an answer turn (D42, ticket 16): no plan event, no new version", async () => {
     const { threadId } = await heroThread();
     const { evs } = await runRefine(
       threadId,
       refineOutput(sloppyHeroPlan(), "answer"),
       "Is the backpack anti-hunchback?",
     );
-    expect(dataOf(evs, "done").version).toBe(2);
-    expect(dataOf(evs, "plan").diff).toEqual({ added: [], removed: [], changed: [] });
+    expect(dataOf(evs, "done")).toMatchObject({ version: 1, answered: true, sessionId: null });
+    expect(eventNames(evs)).not.toContain("plan");
+    expect((await getKitStore().getThread(threadId, OWNER))!.versions).toHaveLength(1);
   });
 
   it("a refine on an awaiting_budget thread that sets the budget produces options, still no demand rows", async () => {

@@ -3,7 +3,9 @@
 // stored plan always gives the same base); then `picks` (itemKey → productId: a swap to any exact candidate of that
 // item, or "Add anyway" of the item's closest product, D28) and `dropped` (itemKeys removed by Fit to budget; wins over
 // a pick). Priced with the Optimizer's exact pricer; over budget ⇒ status over_budget + overBy + fit (fitToBudget).
-import type { BasketLine, BasketOption, Candidate, KitPlan, KitSelection, PlanItem, Shop, Voucher } from "@/contract";
+// Ticket 16 (D40): a pick may also be a 💛 cart interest of that item ("Switch to this"); like "Add anyway" it is
+// a fixed product for the cheapest-basket / Fit-to-budget maths.
+import type { BasketLine, BasketOption, Candidate, Interest, KitPlan, KitSelection, PlanItem, Shop, Voucher } from "@/contract";
 import { fitToBudget, optimize, priceBasket, type OptimizerInput } from "@/server/optimizer";
 import { lineReason, type Lang } from "@/server/optimizer/labels";
 import { today as demoToday } from "@/server/today";
@@ -18,6 +20,7 @@ export class SelectionError extends Error {
 
 export interface PriceSelectionOptions {
   noMatch?: BasketOption["noMatch"]; // from the Matcher: carries the closest product for "Add anyway"
+  interests?: Pick<Interest, "itemKey" | "candidate" | "missingTags">[]; // the persona's cart products per item (D40)
   today?: string;
 }
 
@@ -35,7 +38,12 @@ function alternatives(list: Candidate[], chosen: Candidate): Candidate[] {
   return out;
 }
 
-function pickReason(lang: Lang, c: Candidate, anyway: boolean, missingTags: string[]): string {
+function pickReason(lang: Lang, c: Candidate, anyway: boolean | "cart", missingTags: string[]): string {
+  if (anyway === "cart") {
+    const missing = missingTags.join(", ");
+    if (lang === "vi") return missing ? `Từ giỏ hàng của bạn · thiếu: ${missing}` : "Từ giỏ hàng của bạn";
+    return missing ? `From your cart · missing: ${missing}` : "From your cart";
+  }
   if (anyway) {
     const missing = missingTags.join(", ");
     if (lang === "vi") return missing ? `Bạn vẫn thêm dù thiếu: ${missing}` : "Bạn vẫn thêm sản phẩm gần nhất";
@@ -76,6 +84,7 @@ export function priceSelection(
     if (chosen.get(key)?.product.id === productId) continue;
     const cand = (candidatesByItem[key] ?? []).find((c) => c.product.id === productId);
     const closest = closestOf.get(key);
+    const interest = (opts.interests ?? []).find((i) => i.itemKey === key && i.candidate.product.id === productId);
     if (cand) {
       chosen.set(key, cand);
       reasons.set(key, pickReason(plan.language, cand, false, []));
@@ -83,6 +92,10 @@ export function priceSelection(
       chosen.set(key, closest.candidate);
       anyway.add(key);
       reasons.set(key, pickReason(plan.language, closest.candidate, true, closest.missingTags));
+    } else if (interest) {
+      chosen.set(key, interest.candidate);
+      anyway.add(key);
+      reasons.set(key, pickReason(plan.language, interest.candidate, "cart", interest.missingTags));
     } else {
       throw new SelectionError(`Product ${productId} is not an option for ${key}`);
     }

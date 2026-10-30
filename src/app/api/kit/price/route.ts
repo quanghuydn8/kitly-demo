@@ -1,6 +1,7 @@
 // POST /api/kit/price (CONTRACT §3 "Kit edits"): { threadId, selection } → { option } — the buyer's swaps / Add anyway /
 // drops re-priced exactly (priceSelection, + fit when over budget), saved on the latest version (no new version).
-// Code only, no LLM. Not the caller's thread → 404; a pick that is not an option of its item → 400.
+// Code only, no LLM. Not the caller's thread → 404; a pick that is not an option of its item (exact candidate, closest
+// product, or a 💛 cart interest of the thread's persona, D40) → 400. The option comes back with its `interests`.
 import type { NextRequest } from "next/server";
 import { PriceRequestSchema, type PriceResponse } from "@/contract";
 import { getAdapter } from "@/server/adapter";
@@ -9,6 +10,7 @@ import { apiError, json } from "@/server/http/json";
 import { ownerFrom } from "@/server/http/request";
 import { matchPlan } from "@/server/kit/matcher";
 import { priceSelection, SelectionError } from "@/server/kit/selection";
+import { findInterests } from "@/server/kit/interests";
 import { today } from "@/server/today";
 
 export const dynamic = "force-dynamic";
@@ -29,11 +31,19 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const adapter = getAdapter();
   const day = today();
-  const [shops, vouchers] = await Promise.all([adapter.listShops(), adapter.listVouchers(thread.thread.persona)]);
-  const match = await matchPlan(adapter, latest.plan, { shops, today: day });
+  const [shops, vouchers, persona] = await Promise.all([
+    adapter.listShops(),
+    adapter.listVouchers(thread.thread.persona),
+    adapter.getPersona(thread.thread.persona),
+  ]);
+  const plan = latest.plan;
+  const match = await matchPlan(adapter, plan, { shops, today: day });
   const { selection } = body.data;
+  // every cart product that fits an item, whatever is chosen now (so re-pricing an accepted swap still validates)
+  const cart = findInterests(plan, { lines: [] }, match.pool, persona, vouchers, day);
   try {
-    const option = priceSelection(latest.plan, match.candidates, selection, shops, vouchers, { noMatch: match.noMatch, today: day });
+    const priced = priceSelection(plan, match.candidates, selection, shops, vouchers, { noMatch: match.noMatch, interests: cart, today: day });
+    const option = { ...priced, interests: findInterests(plan, priced, match.pool, persona, vouchers, day) };
     await store.saveSelection(thread.thread.id, owner, selection);
     console.info(`[kit] price ${selection.profile} ${Math.round(performance.now() - t0)}ms`);
     return json<PriceResponse>({ option });
