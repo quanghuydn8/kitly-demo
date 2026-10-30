@@ -18,7 +18,14 @@ export interface AdviceInput {
   matchingProducts: number;
   priceBand: { p25: number; p75: number } | null;
   neededWith: { category: CategoryId; share: number }[];
+  /** For the selected shop: listing_gap = the shop already sells a fitting product (candidates) whose listing lacks the tags. */
+  type?: "listing_gap" | "assortment_gap";
+  candidates?: { title: string }[];
 }
+
+const isListing = (g: AdviceInput) => g.type === "listing_gap" && !!g.candidates?.length;
+/** Listing-gap advice ("fix your listing") is cached apart from the shop-neutral advice of the same need. */
+export const adviceKey = (g: AdviceInput) => (isListing(g) ? `${g.key}#listing` : g.key);
 
 const AdviceSchema = z.object({ advice: z.string() });
 const MAX_CHARS = 240;
@@ -28,6 +35,8 @@ export const countsSignature = (g: AdviceInput) => `${g.thisWeek}|${g.lastWeek}|
 const band = (g: AdviceInput) => (g.priceBand ? `${formatVnd(g.priceBand.p25)}–${formatVnd(g.priceBand.p75)}` : null);
 
 export function fallbackAdvice(g: AdviceInput): string {
+  if (isListing(g))
+    return `${g.thisWeek} buyers looked for "${g.needLabel}" this week: add ${g.tags.join(", ")} to your listing "${g.candidates![0].title}" so they find it.`;
   const trend = g.thisWeek > g.lastWeek ? "up from" : "vs";
   const tail = band(g) ? `buyers expect to pay ${band(g)}` : "worth checking whether you can source it";
   return `${g.thisWeek} buyers looked for "${g.needLabel}" this week (${trend} ${g.lastWeek} last week) and ${g.matchingProducts} products match; ${tail}.`;
@@ -46,7 +55,11 @@ function adviceMessages(g: AdviceInput) {
       role: "system" as const,
       content:
         "You advise sellers on an online marketplace. Write exactly ONE short, actionable sentence in English " +
-        "(max 30 words) about this unmet buyer demand. Use only the facts given; never invent numbers, shops or products.",
+        "(max 30 words) about this unmet buyer demand. Use only the facts given; never invent numbers, shops or products." +
+        (isListing(g)
+          ? " This seller ALREADY sells a product that fits (sellerListing) but its listing does not say so: advise them to update that listing" +
+            " (add the missing tags to its title and tags). Never advise creating a new or duplicate listing."
+          : " Nobody sells a product that fits: advise whether stocking it is worth considering (demand, trend, price band)."),
     },
     {
       role: "user" as const,
@@ -59,13 +72,14 @@ function adviceMessages(g: AdviceInput) {
         matchingProductsOnMarketplace: g.matchingProducts,
         acceptedPriceBand: band(g),
         neededWith: g.neededWith.map((n) => n.category),
+        ...(isListing(g) ? { gapType: "listing_gap", sellerListing: g.candidates![0].title, missingTags: g.tags } : {}),
       }),
     },
   ];
 }
 
 export async function adviceFor(gaps: AdviceInput[], llm: LLMClient, store: AdviceStore): Promise<string[]> {
-  const cached = await Promise.all(gaps.map((g) => store.get(g.key).catch(() => null)));
+  const cached = await Promise.all(gaps.map((g) => store.get(adviceKey(g)).catch(() => null)));
   const { fast } = llmModels();
   return Promise.all(
     gaps.map((g, i) => {
@@ -77,7 +91,7 @@ export async function adviceFor(gaps: AdviceInput[], llm: LLMClient, store: Advi
         .then(async ({ advice }) => {
           const sentence = oneSentence(advice);
           if (!sentence) return fallbackAdvice(g);
-          await store.put(g.key, sig, sentence).catch((err) => console.warn(`[insights] advice cache write: ${err}`));
+          await store.put(adviceKey(g), sig, sentence).catch((err) => console.warn(`[insights] advice cache write: ${err}`));
           return sentence;
         })
         .catch((err) => {

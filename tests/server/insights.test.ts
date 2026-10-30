@@ -317,6 +317,21 @@ describe("buildInsights: advice", () => {
     expect(gap(third.gaps, "school-backpack|anti-hunchback")!.advice).toBe("Backpack v1.");
   });
 
+  // rehearsal 2 (31/10): the Listing-gap card for Minh An said "List an anti-hunchback school backpack…" — i.e. create a
+  // new listing, the opposite of D18/D19 (fix the listing you already have, never duplicate)
+  it("a listing gap's advice is about fixing the seller's own listing (named), never a new listing; cached apart", async () => {
+    const { llm, store, run } = setup([judge(false), judge(true, SPINE), advice("Tag it."), advice("Stock it.")]);
+    await run("shop-minhan");
+    const adv = llm.calls.filter((c) => c.name === "gap_advice").map((c) => c.messages.map((m) => m.content).join("\n"));
+    const listing = adv.find((p) => p.includes("Minh An Kids Backpack New Model 2026"))!;
+    expect(listing).toMatch(/update (this|that|the) listing|fix (this|that|the) listing/i);
+    expect(listing).toMatch(/never (advise|suggest) (creating|listing) a new or duplicate/i);
+    const assortment = adv.find((p) => p.includes("backpack-cover"))!;
+    expect(assortment).not.toMatch(/update (this|that|the) listing/i);
+    expect(await store.get("school-backpack|anti-hunchback#listing")).toMatchObject({ advice: "Tag it." });
+    expect(await store.get("school-backpack|anti-hunchback")).toBeNull();
+  });
+
   it("an advice LLM error falls back to a code sentence that is not cached", async () => {
     const { store, run } = setup([new Error("down"), new Error("down")]);
     const res = await run("shop-trailhead");
