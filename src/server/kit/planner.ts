@@ -72,6 +72,7 @@ export function plannerRules(today: string): string[] {
     "assumptions: short chips for what you assumed (e.g. \"1 child\", \"Grade 1\").",
     "key: short kebab-case id, unique in the plan (e.g. backpack, water-bottle).",
     "Be consistent: the same sentence must give the same plan, with the usual items for the occasion. Still list the full kit — typically 8–10 items for back_to_school, for tet_gifts 5–8 gift items.",
+    "For every event, including other (needs outside the store such as a wedding, a puppy or learning guitar), list the full kit: 5–10 items the buyer would need, with category null for each item no category fits. Never return an empty or one-item plan.",
   ];
 }
 
@@ -146,7 +147,16 @@ export async function callPlanner<T>(llm: LLMClient, schema: z.ZodType<T>, messa
   throw new PlannerError(`Planner failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
 }
 
+/** Fewer items than this ⇒ the planner is asked once more (rehearsal 2: "planning a wedding" gave 0 items 2 runs in 3). */
+export const MIN_PLAN_ITEMS = 3;
+
 export async function planKit(llm: LLMClient, query: string, opts: { today: string }): Promise<KitPlan> {
-  const raw = await callPlanner(llm, PlannerOutputSchema, plannerMessages(query, opts.today), "kit_plan");
+  const messages = plannerMessages(query, opts.today);
+  let raw = await callPlanner(llm, PlannerOutputSchema, messages, "kit_plan");
+  if (raw.items.length < MIN_PLAN_ITEMS) {
+    // a thin plan is a valid answer, so a failed second ask keeps the first one instead of failing the kit
+    const again = await callPlanner(llm, PlannerOutputSchema, messages, "kit_plan").catch(() => raw);
+    if (again.items.length > raw.items.length) raw = again;
+  }
   return postProcessPlan(raw, opts.today);
 }

@@ -199,6 +199,7 @@ describe("POST /api/kit: honest gaps", () => {
     expect(options[1].noMatch.map((n) => [n.itemKey, n.reason])).toEqual([
       ["dog-food", "no_category"],
       ["dog-bed", "no_category"],
+      ["dog-leash", "no_category"],
     ]);
     expect(options[1].lines).toEqual([]);
     const { sessionId } = dataOf(evs, "plan");
@@ -206,6 +207,7 @@ describe("POST /api/kit: honest gaps", () => {
     expect(rows.map((r) => [r.needLabel, r.category, r.matchedCount])).toEqual([
       ["Dog food", null, 0],
       ["Dog bed", null, 0],
+      ["Dog leash", null, 0],
     ]);
     expect(names(evs).at(-1)).toBe("done");
   });

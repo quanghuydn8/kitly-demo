@@ -55,7 +55,12 @@ export function puppyPlan(budget: number | null = null) {
     language: "en",
     budget,
     deadline: null,
-    items: [it("dog-food", null, { needLabel: "Dog food" }), it("dog-bed", null, { needLabel: "Dog bed" })],
+    // a realistic off-catalog plan: ≥ MIN_PLAN_ITEMS items, all null (a thinner one is asked again, rehearsal 2)
+    items: [
+      it("dog-food", null, { needLabel: "Dog food" }),
+      it("dog-bed", null, { needLabel: "Dog bed" }),
+      it("dog-leash", null, { needLabel: "Dog leash" }),
+    ],
     assumptions: [],
   };
 }

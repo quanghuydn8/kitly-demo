@@ -24,6 +24,8 @@ describe("planKit: prompt", () => {
     expect(prompt).toMatch(/uniform = 2/);
     expect(prompt).toMatch(/Be consistent: the same sentence must give the same plan/);
     expect(prompt).toMatch(/tet_gifts 5–8 gift items/);
+    // rehearsal 2 (31/10): "planning a wedding" gave 0 items in 2 of 3 real runs — the full-kit rule covers every event
+    expect(prompt).toMatch(/every event, including other[^\n]*5–10 items/i);
     expect(prompt).toContain(HERO);
   });
 
@@ -100,5 +102,22 @@ describe("planKit: retry", () => {
     expect(err).toBeInstanceOf(PlannerError);
     expect((err as PlannerError).code).toBe("llm_error");
     expect(llm.calls).toHaveLength(2);
+  });
+
+  it("a plan with fewer than 3 items is asked again once; the fuller plan wins", async () => {
+    const thin = { ...sloppyHeroPlan(), event: "other", items: [] };
+    const llm = new FakeLLM({ structured: [thin, sloppyHeroPlan()] });
+    const plan = await planKit(llm, "planning a wedding", { today: TODAY });
+    expect(llm.calls).toHaveLength(2);
+    expect(plan.items.length).toBe(9);
+  });
+
+  it("still thin after the second ask ⇒ keeps the fuller of the two, never throws", async () => {
+    const one = { ...sloppyHeroPlan(), event: "other", items: sloppyHeroPlan().items.slice(0, 1) };
+    const none = { ...sloppyHeroPlan(), event: "other", items: [] };
+    const llm = new FakeLLM({ structured: [one, none] });
+    const plan = await planKit(llm, "learning guitar", { today: TODAY });
+    expect(llm.calls).toHaveLength(2);
+    expect(plan.items.length).toBe(1);
   });
 });
