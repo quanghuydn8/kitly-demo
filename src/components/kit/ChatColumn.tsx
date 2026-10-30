@@ -4,11 +4,15 @@
 // Retry) and the composer. Presentational: KitScreen owns the data and the requests.
 // T15: a "Removed: X" system line carries Undo (restore_item); the latest version's assumption chips are editable
 // and send `"<old>" is wrong: <new>` through onSend (the composer path → LLM refine).
+// T17 (D41/D42): every assistant message (new kit, refine, answer) ends with its follow-up question + suggestion pills;
+// only the latest turn's pills are clickable. A swap pill → onFollowUpSwap (price, no AI, KitScreen adds a local
+// "⚙ Switched … · Undo" turn); any other pill → onSend (refine). Answer messages interleave with versions by createdAt.
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { AlertTriangle, RotateCcw, Send, Sparkles } from "lucide-react";
-import type { KitPlan, KitVersion } from "@/contract";
+import type { FollowUp, KitMessage, KitPlan, KitVersion } from "@/contract";
 import { runSummary, runUserText, type RunState } from "@/lib/client/kit-run";
 import { assumptionCorrection, undoableRemoval } from "@/lib/client/kit-edits";
+import { chatTurns, type LocalTurn } from "@/lib/client/kit-chat";
 import { budgetChoiceLabel, clarifyQuestion, DEFAULT_BUDGET_CHOICES } from "@/lib/client/kit-text";
 import { Timeline } from "./Timeline";
 
@@ -32,6 +36,48 @@ export interface ChatColumnProps {
   onRetry(): void;
   /** Undo on a "Removed: X" line → adjust restore_item. */
   onRestoreItem?(itemKey: string): void;
+  /** Answer-only turns (D42), interleaved with versions by createdAt. */
+  messages?: KitMessage[];
+  /** Follow-up swaps made in this page view. */
+  localTurns?: LocalTurn[];
+  /** A follow-up pill with a swap action: re-price with the pick (no AI). */
+  onFollowUpSwap?(text: string, action: NonNullable<FollowUp["suggestions"][number]["action"]>): void;
+  /** Undo on a local "⚙ Switched …" line. */
+  onUndoLocal?(id: string): void;
+}
+
+/** The follow-up question + its suggestion pills; `active` = the latest turn's, the only clickable ones. */
+function FollowUpBlock({
+  followUp,
+  active,
+  busy,
+  onSend,
+  onSwap,
+}: {
+  followUp: FollowUp;
+  active: boolean;
+  busy: boolean;
+  onSend(text: string): void;
+  onSwap?: ChatColumnProps["onFollowUpSwap"];
+}) {
+  return (
+    <div className="space-y-1.5 border-t pt-2">
+      <p className="font-medium text-gray-900">{followUp.question}</p>
+      <div role="group" aria-label="Suggestions" className="flex flex-wrap gap-1.5">
+        {followUp.suggestions.map((s) => (
+          <button
+            key={s.text}
+            type="button"
+            disabled={!active || busy}
+            onClick={() => (s.action?.type === "swap" && onSwap ? onSwap(s.text, s.action) : onSend(s.text))}
+            className="rounded-full border border-[var(--kitly-accent)] px-3 py-1 text-xs font-medium text-[var(--kitly-accent)] hover:bg-orange-50 disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent"
+          >
+            {s.text}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function UserBubble({ text }: { text: string }) {
@@ -154,13 +200,31 @@ function SystemLine({ text, onUndo, busy }: { text: string; onUndo?(): void; bus
   );
 }
 
-export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBudget, onRetry, onRestoreItem }: ChatColumnProps) {
+export function ChatColumn({
+  versions,
+  run,
+  summaries,
+  busy,
+  onSend,
+  onChooseBudget,
+  onRetry,
+  onRestoreItem,
+  messages = [],
+  localTurns = [],
+  onFollowUpSwap,
+  onUndoLocal,
+}: ChatColumnProps) {
   const endRef = useRef<HTMLLIElement>(null);
   const last = versions[versions.length - 1];
   // Chips are editable on the newest assistant message (adjust/restore versions are system lines without chips).
   const lastAssistant = [...versions].reverse().find((v) => v.kind === "new" || v.kind === "refine");
   // A finished run whose version is already loaded is shown from the saved version instead.
-  const liveRun = run && !(run.status === "done" && versions.some((v) => v.version === run.version)) ? run : null;
+  // An answer run keeps its (unchanged) version number, so it stays shown until the reload brings its message.
+  const liveRun = run && !(run.status === "done" && !run.answered && versions.some((v) => v.version === run.version)) ? run : null;
+  const turns = chatTurns(versions, messages, localTurns);
+  const lastTurn = turns[turns.length - 1];
+  const followUpOf = (active: boolean, f: FollowUp | null) =>
+    f && <FollowUpBlock followUp={f} active={active} busy={busy} onSend={onSend} onSwap={onFollowUpSwap} />;
   const empty = versions.length === 0 && !liveRun;
 
   useEffect(() => {
@@ -197,7 +261,31 @@ export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBud
   return (
     <div className="flex h-full flex-col">
       <ol aria-label="Conversation" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
-        {versions.map((v) => {
+        {turns.map((t) => {
+          const isLast = t === lastTurn && !liveRun;
+          if (t.type === "local") {
+            const l = t.local;
+            return [
+              <UserBubble key={`lu${l.id}`} text={l.userText} />,
+              <SystemLine
+                key={`ls${l.id}`}
+                text={l.systemText}
+                busy={busy}
+                onUndo={l.undoable && onUndoLocal ? () => onUndoLocal(l.id) : undefined}
+              />,
+            ];
+          }
+          if (t.type === "message") {
+            const m = t.message;
+            return [
+              <UserBubble key={`mu${m.createdAt}`} text={m.userText} />,
+              <Assistant key={`ma${m.createdAt}`}>
+                <p className="whitespace-pre-wrap">{m.answer}</p>
+                {followUpOf(isLast, m.followUp)}
+              </Assistant>,
+            ];
+          }
+          const v = t.version;
           if (v.kind === "adjust" || v.kind === "restore") {
             const undoKey = onRestoreItem ? undoableRemoval(v, last) : null;
             return (
@@ -215,6 +303,7 @@ export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBud
                 <Clarify text={clarifyQuestion(v.plan.language)} choices={DEFAULT_BUDGET_CHOICES} busy={busy} onChoose={onChooseBudget} />
               )}
               {awaiting && v !== last && <p className="text-xs text-gray-500">Asked for your budget</p>}
+              {followUpOf(isLast, v.followUp)}
             </Assistant>,
           ];
         })}
@@ -226,7 +315,7 @@ export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBud
                 <Timeline steps={liveRun.steps} />
               ) : (
                 <details className="text-xs text-gray-500">
-                  <summary className="cursor-pointer">{runSummary(liveRun) || "Steps"}</summary>
+                  <summary className="cursor-pointer">{liveRun.answered ? "Answered" : runSummary(liveRun) || "Steps"}</summary>
                   <div className="mt-2">
                     <Timeline steps={liveRun.steps} />
                   </div>
@@ -234,6 +323,7 @@ export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBud
               )}
               {liveRun.explanation && <p className="whitespace-pre-wrap">{liveRun.explanation}</p>}
               {liveRun.plan && liveRun.status !== "running" && <Chips plan={liveRun.plan} />}
+              {liveRun.status === "done" && followUpOf(true, liveRun.followUp)}
               {liveRun.clarify && (
                 <Clarify text={liveRun.clarify.text} choices={liveRun.clarify.choices} busy={busy} onChoose={onChooseBudget} />
               )}

@@ -3,6 +3,7 @@
 // reload keeps them. Demo/dev only: totals are never computed here beyond copying fixture values.
 import kitSample from "@/contract/fixtures/kit.sample.json";
 import clarifySample from "@/contract/fixtures/kit.clarify.sample.json";
+import answerSample from "@/contract/fixtures/kit.answer.sample.json";
 import threadsSample from "@/contract/fixtures/threads.sample.json";
 import {
   KitStreamSchema,
@@ -72,9 +73,26 @@ async function replay(
     if (e.event === "done") {
       const v = runAsVersion(run);
       if (v) save(upsertVersion(load(), { ...v, createdAt: nowIso() }, title));
+      if (run.answered && request.kind === "refine") saveMessage(run, request.threadId, request.message);
     }
     onEvent(e);
   }
+}
+
+/** Answer turn (D42): kept as a KitMessage after the thread's current version. */
+function saveMessage(run: ReturnType<typeof startRun>, threadId: string, userText: string) {
+  const threads = load();
+  const t = threads.find((x) => x.thread.id === threadId);
+  if (!t) return;
+  t.messages.push({
+    threadId,
+    afterVersion: t.versions.length,
+    createdAt: nowIso(),
+    userText,
+    answer: run.explanation,
+    followUp: run.followUp,
+  });
+  save(threads);
 }
 
 function retarget(events: KitStreamEvent[], threadId: string, version: number, refine: boolean): KitStreamEvent[] {
@@ -157,16 +175,21 @@ export const mockApi: KitApi = {
     if (!option) throw new Error("Nothing to price");
     // Mock only: move the picked alternative into the line, Add anyway turns the closest into a line, dropped items
     // go to skipped; the fixture totals are kept.
+    // 💛 cart products (D40) are valid picks too.
+    const fromCart = (itemKey: string) =>
+      option.interests?.find((i) => i.itemKey === itemKey && i.candidate.product.id === selection.picks[itemKey])?.candidate;
     const lines = option.lines
       .filter((l) => !selection.dropped.includes(l.itemKey))
       .map((l) => {
-        const alt = l.alternatives.find((a) => a.product.id === selection.picks[l.itemKey]);
+        const alt = l.alternatives.find((a) => a.product.id === selection.picks[l.itemKey]) ?? fromCart(l.itemKey);
         return alt ? { ...l, product: alt.product, shop: alt.shop, reason: "Your pick" } : l;
       });
-    const anyway = option.noMatch.filter((n) => n.closest && n.closest.candidate.product.id === selection.picks[n.itemKey]);
+    const anyway = option.noMatch.filter(
+      (n) => (n.closest && n.closest.candidate.product.id === selection.picks[n.itemKey]) || fromCart(n.itemKey),
+    );
     for (const n of anyway) {
-      const c = n.closest!.candidate;
-      lines.unshift({ itemKey: n.itemKey, product: c.product, shop: c.shop, quantity: 1, lineTotal: c.product.price, reason: "Added anyway", alternatives: [] });
+      const c = fromCart(n.itemKey) ?? n.closest!.candidate;
+      lines.unshift({ itemKey: n.itemKey, product: c.product, shop: c.shop, quantity: 1, lineTotal: c.product.price, reason: fromCart(n.itemKey) ? "From your cart" : "Added anyway", alternatives: [] });
     }
     const skipped = [
       ...option.skipped,
@@ -191,6 +214,12 @@ export const mockApi: KitApi = {
   },
   async refineKit(threadId, message, onEvent, signal) {
     const t = load().find((x) => x.thread.id === threadId);
+    // Mock only: a question is answered (no new version), anything else replays the hero kit as a new version.
+    if (message.trim().endsWith("?")) {
+      const current = t?.versions.length ?? 1;
+      await replay(retarget(KitStreamSchema.parse(answerSample), threadId, current, false), onEvent, { kind: "refine", threadId, message }, t?.thread.title ?? message, signal);
+      return;
+    }
     const next = (t?.versions.length ?? 0) + 1;
     await replay(
       retarget(KitStreamSchema.parse(kitSample), threadId, next, true),

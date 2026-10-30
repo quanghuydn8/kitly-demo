@@ -2,10 +2,12 @@
 // DemoMart header (T10, D37): logo, search bar with Search products / Describe your need toggle (need mode is a
 // plain GET form to /kit/new?q=, which starts a Kitly run), My kits, cart count, and the small Seller Centre link —
 // the only buyer-side entry to the seller view. Needs <CartProvider> above it.
+// T17: the persona chip (needs <PersonaProvider>; hidden without it). `inKit` = rendered above the Kitly screen.
 import { useState } from "react";
 import Link from "next/link";
 import { Search, ShoppingBag, ShoppingCart, Sparkles } from "lucide-react";
 import { useCart } from "@/lib/client/cart-store";
+import { PersonaChip } from "./PersonaChip";
 
 type Mode = "search" | "need";
 
@@ -19,7 +21,7 @@ const MODES: { id: Mode; label: string; action: string; placeholder: string }[] 
   },
 ];
 
-export function Header({ query = "" }: { query?: string }) {
+export function Header({ query = "", inKit = false }: { query?: string; inKit?: boolean }) {
   const [mode, setMode] = useState<Mode>("search");
   const { totals } = useCart();
   const current = MODES.find((m) => m.id === mode)!;
@@ -29,6 +31,7 @@ export function Header({ query = "" }: { query?: string }) {
     <header className="sticky top-0 z-20 bg-[var(--kitly-accent)] text-white shadow">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 sm:py-3">
         <div className="flex items-center justify-end gap-4 text-xs">
+          <PersonaChip inKit={inKit} />
           <Link href="/kit" className="flex items-center gap-1 hover:underline">
             <Sparkles aria-hidden className="h-3.5 w-3.5" />
             My kits

@@ -1,7 +1,7 @@
 // One live Kitly run (POST /api/kit or /api/kit/refine) as pure state: applyEvent folds SSE events in order.
 // runAsVersion turns an in-flight run into a provisional KitVersion so the kit panel renders options before `done`
 // (the server's saved version replaces it once the thread is refetched).
-import type { BasketOption, KitPlan, KitStreamEvent, KitVersion, PlanDiff, StepId } from "@/contract";
+import type { BasketOption, FollowUp, KitPlan, KitStreamEvent, KitVersion, PlanDiff, StepId } from "@/contract";
 
 export type RunRequest = { kind: "new"; query: string } | { kind: "refine"; threadId: string; message: string };
 
@@ -22,7 +22,10 @@ export interface RunState {
   clarify: { text: string; choices: (number | null)[] } | null;
   options: BasketOption[] | null;
   explanation: string;
+  /** T17: the follow-up question sent after the explanation (new kit, refine and answer turns). */
+  followUp: FollowUp | null;
   error: { code: string; message: string } | null;
+  /** D42: the stream ended with done.answered — an answer turn, no new version. */
   answered: boolean;
 }
 
@@ -38,6 +41,7 @@ export function startRun(request: RunRequest): RunState {
     clarify: null,
     options: null,
     explanation: "",
+    followUp: null,
     error: null,
     answered: false,
   };
@@ -75,7 +79,7 @@ export function applyEvent(run: RunState, e: KitStreamEvent): RunState {
     case "explanation":
       return { ...run, explanation: run.explanation + e.data.delta };
     case "followup":
-      return run; // follow-up question: ticket 17
+      return { ...run, followUp: e.data.followUp };
     case "done":
       return {
         ...run,
@@ -115,6 +119,12 @@ export function runAsVersion(run: RunState): KitVersion | null {
     explanation: run.explanation,
     diff: run.diff,
     selection: null,
-    followUp: null,
+    followUp: run.followUp,
   };
+}
+
+/** Versions the kit panel shows: the saved ones plus the in-flight run's provisional version (never an answer turn). */
+export function panelVersions(saved: KitVersion[], run: RunState | null): KitVersion[] {
+  const provisional = run ? runAsVersion(run) : null;
+  return provisional && !saved.some((v) => v.version === provisional.version) ? [...saved, provisional] : saved;
 }

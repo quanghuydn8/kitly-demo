@@ -5,12 +5,24 @@
 // (options / re-priced overrides); nothing is computed here. Presentational: KitScreen owns requests.
 // T15 edits (D28/D29/D32/D33): ✕ per basket row (remove_item), Add anyway on the closest product, Fit to budget
 // buttons + Undo under the over-budget banner, inline budget/deadline edit in the header. Never blocked by budget.
+// T17 (D40/D44/D46): "💛 In your cart" card under the line / No exact match row of an interest (Switch to this →
+// /api/kit/price pick, hidden once it is the line), 🎟 wallet savings first, "Deliver to <district, city>" in the header,
+// an Undo note after a price edit (Fit to budget or a cart switch).
 import { useState, type KeyboardEvent } from "react";
 import { AlertTriangle, ArrowLeftRight, ChevronDown, PackageX, Pencil, Plus, RotateCcw, ShoppingCart, Undo2, X } from "lucide-react";
-import { EVENTS, type BasketLine, type BasketOption, type FitSuggestion, type KitPlan, type KitVersion, type Profile } from "@/contract";
+import {
+  EVENTS,
+  type BasketLine,
+  type BasketOption,
+  type FitSuggestion,
+  type Interest,
+  type KitPlan,
+  type KitVersion,
+  type Profile,
+} from "@/contract";
 import { basketTabs, defaultTabId } from "@/lib/client/kit-compare";
 import { closestMatchLabel, parseBudgetInput } from "@/lib/client/kit-edits";
-import { missingLabel, noMatchSentence, overMaxLabel } from "@/lib/client/kit-text";
+import { kAmount, missingLabel, noMatchSentence, overMaxLabel } from "@/lib/client/kit-text";
 import { formatCount, formatShortDate, formatVnd } from "@/lib/client/format";
 import { MiniProduct } from "./MiniProduct";
 
@@ -38,6 +50,14 @@ export interface KitPanelProps {
   onUndoFit?(): void;
   /** `${version}:${profile}` of the basket whose last Fit to budget can be undone. */
   fitUndoKey?: string | null;
+  /** Text of that Undo note (default "Basket edited to fit your budget."). */
+  undoText?: string;
+  /** 💛 card "Switch to this": pick the cart product for the item → /api/kit/price. */
+  onSwitchInterest?(version: number, profile: Profile, itemKey: string, productId: string): void;
+  /** "Cau Giay, Hanoi" for the thread's persona; null/undefined = no delivery line (Guest). */
+  deliverTo?: string | null;
+  /** Show the tab holding this profile (e.g. after a follow-up swap re-priced it). */
+  activeProfile?: Profile | null;
   onSetBudget?(budget: number | null): void;
   onSetDeadline?(deadline: string | null): void;
 }
@@ -65,6 +85,7 @@ export function KitPanel(props: KitPanelProps) {
         busy={props.busy}
         onSetBudget={props.onSetBudget}
         onSetDeadline={props.onSetDeadline}
+        deliverTo={props.deliverTo ?? null}
       />
       <div className="space-y-4 p-3 sm:p-4">
         {readOnly && (
@@ -106,9 +127,11 @@ function KitHeader({
   busy,
   onSetBudget,
   onSetDeadline,
+  deliverTo,
 }: {
   version: KitVersion;
   total: number;
+  deliverTo: string | null;
   onViewVersion(v: number | null): void;
   editable: boolean;
   busy?: boolean;
@@ -154,6 +177,7 @@ function KitHeader({
           </span>
         )
       )}
+      {deliverTo && <span className="text-xs text-gray-500">Deliver to {deliverTo}</span>}
       <label className="ml-auto flex items-center gap-1 text-xs text-gray-500">
         <span className="sr-only">Version</span>
         <select
@@ -248,12 +272,22 @@ function VersionBody({
   onFit,
   onUndoFit,
   fitUndoKey,
+  undoText,
+  onSwitchInterest,
+  activeProfile,
 }: KitPanelProps & { version: KitVersion; readOnly: boolean }) {
   const tabs = basketTabs(v.options);
   const [tabId, setTabId] = useState(() => {
     const fromSelection = v.selection && tabs.find((t) => t.profiles.includes(v.selection!.profile));
     return fromSelection?.id ?? defaultTabId(tabs);
   });
+  const focusTab = activeProfile ? tabs.find((t) => t.profiles.includes(activeProfile))?.id : undefined;
+  const [focused, setFocused] = useState(focusTab);
+  if (focusTab !== focused) {
+    // activeProfile changed (a follow-up swap re-priced that basket): show it.
+    setFocused(focusTab);
+    if (focusTab) setTabId(focusTab);
+  }
   const tab = tabs.find((t) => t.id === tabId) ?? tabs[0];
   // No tabs ⇒ every option is empty: one honest-gap view of the Balanced (or first) option.
   const base = tab?.option ?? v.options.find((o) => o.profile === "balanced") ?? v.options[0];
@@ -264,6 +298,28 @@ function VersionBody({
   const over = option.status === "over_budget";
   const exact = option.noMatch.filter((n) => n.closest);
   const notInStore = option.noMatch.filter((n) => !n.closest);
+  // 💛 cards (D40): from the shown option, never for a product that is already the item's line.
+  const interestFor = (itemKey: string): Interest | undefined =>
+    (option.interests ?? base.interests ?? []).find(
+      (i) => i.itemKey === itemKey && !option.lines.some((l) => l.itemKey === itemKey && l.product.id === i.candidate.product.id),
+    );
+  const fromCart = (l: BasketLine) =>
+    (base.interests ?? []).some((i) => i.itemKey === l.itemKey && i.candidate.product.id === l.product.id) &&
+    !base.lines.some((b) => b.itemKey === l.itemKey && b.product.id === l.product.id);
+  const cartCard = (itemKey: string) => {
+    const i = interestFor(itemKey);
+    return (
+      i && (
+        <InterestCard
+          interest={i}
+          maxUnitPrice={v.plan.items.find((x) => x.key === itemKey)?.maxUnitPrice ?? null}
+          readOnly={readOnly}
+          busy={busy}
+          onSwitch={() => onSwitchInterest?.(v.version, profile, itemKey, i.candidate.product.id)}
+        />
+      )
+    );
+  };
 
   return (
     <>
@@ -321,7 +377,7 @@ function VersionBody({
 
       {!readOnly && fitUndoKey === key && (
         <p className="flex items-center gap-2 text-xs text-gray-600">
-          <span>Basket edited to fit your budget.</span>
+          <span>{undoText ?? "Basket edited to fit your budget."}</span>
           <button type="button" disabled={busy} onClick={() => onUndoFit?.()} className="flex items-center gap-1 font-medium text-[var(--kitly-accent)] disabled:opacity-50">
             <Undo2 aria-hidden className="h-3 w-3" />
             Undo
@@ -336,7 +392,8 @@ function VersionBody({
               key={l.itemKey}
               line={l}
               needLabel={needLabel(l.itemKey)}
-              closestLabel={closestMatchLabel(base, l)}
+              closestLabel={closestMatchLabel(base, l) ?? (fromCart(l) ? "💛 From your cart" : null)}
+              extra={cartCard(l.itemKey)}
               readOnly={readOnly}
               busy={busy}
               onSwap={(productId) => onSwap(v.version, profile, l.itemKey, productId)}
@@ -357,6 +414,7 @@ function VersionBody({
               readOnly={readOnly}
               busy={busy}
               onAddAnyway={() => onAddAnyway?.(v.version, profile, n.itemKey, n.closest!.candidate.product.id)}
+              extra={cartCard(n.itemKey)}
             />
           ))}
         </ul>
@@ -411,8 +469,10 @@ function BasketRow({
   onSwap,
   onRemove,
   onTakeOut,
+  extra,
 }: {
   line: BasketLine;
+  extra?: React.ReactNode;
   needLabel: string;
   /** Set when this line is an Add-anyway closest product. */
   closestLabel: string | null;
@@ -482,6 +542,7 @@ function BasketRow({
           )}
         </div>
       )}
+      {extra}
     </li>
   );
 }
@@ -492,8 +553,10 @@ function NoMatchRow({
   readOnly,
   busy,
   onAddAnyway,
+  extra,
 }: {
   row: BasketOption["noMatch"][number];
+  extra?: React.ReactNode;
   plan: KitPlan;
   readOnly: boolean;
   busy?: boolean;
@@ -524,7 +587,65 @@ function NoMatchRow({
           )}
         </div>
       </div>
+      {extra}
     </li>
+  );
+}
+
+/** "💛 In your cart" (D40): the cart product, its price after the wallet/shop voucher, what it lacks, Switch to this. */
+function InterestCard({
+  interest: i,
+  maxUnitPrice,
+  readOnly,
+  busy,
+  onSwitch,
+}: {
+  interest: Interest;
+  maxUnitPrice: number | null;
+  readOnly: boolean;
+  busy?: boolean;
+  onSwitch(): void;
+}) {
+  const p = i.candidate.product;
+  const discounted = i.priceAfterVoucher < p.price;
+  return (
+    <section aria-label="In your cart" className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-amber-800">💛 In your cart</p>
+      <MiniProduct product={p} shop={i.candidate.shop} arrivesBy={i.candidate.arrivesBy} />
+      <p className="text-xs text-gray-700">
+        {discounted ? (
+          <>
+            <span className="line-through">{formatVnd(p.price)}</span> → <strong className="text-gray-900">{formatVnd(i.priceAfterVoucher)}</strong>
+            {i.walletVoucherCode && <> with {i.walletVoucherCode}</>}
+          </>
+        ) : (
+          <strong className="text-gray-900">{formatVnd(p.price)}</strong>
+        )}
+      </p>
+      <div className="flex flex-wrap items-center gap-1.5 text-xs">
+        {i.overMaxPriceBy !== null && i.overMaxPriceBy > 0 && (
+          <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-700">
+            {maxUnitPrice !== null
+              ? `over your ${kAmount(maxUnitPrice)} limit by ${formatVnd(i.overMaxPriceBy)}`
+              : `over your max price by ${formatVnd(i.overMaxPriceBy)}`}
+          </span>
+        )}
+        {i.missingTags.length > 0 && (
+          <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">missing: {i.missingTags.join(", ")}</span>
+        )}
+        {!readOnly && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onSwitch}
+            className="ml-auto flex items-center gap-1 rounded-md bg-[var(--kitly-accent)] px-2 py-0.5 font-medium text-white hover:opacity-90 disabled:opacity-50"
+          >
+            <ArrowLeftRight aria-hidden className="h-3 w-3" />
+            Switch to this
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -538,10 +659,10 @@ function Totals({ option, budget }: { option: BasketOption; budget: number | nul
       {option.discountTotal > 0 && <Row label="Discounts" value={`−${formatVnd(option.discountTotal)}`} accent />}
       {option.savings.length > 0 && (
         <ul className="space-y-0.5 pl-3 text-xs text-emerald-700">
-          {option.savings.map((s) => (
+          {[...option.savings.filter((s) => s.wallet), ...option.savings.filter((s) => !s.wallet)].map((s) => (
             <li key={s.label} className="flex justify-between gap-2">
               <span>
-                {s.wallet && <span aria-hidden>💛 </span>}
+                {s.wallet && <span aria-hidden>🎟 </span>}
                 {s.label}
               </span>
               <span className="shrink-0">−{formatVnd(s.amount)}</span>

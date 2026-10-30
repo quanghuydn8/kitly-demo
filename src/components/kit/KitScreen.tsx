@@ -5,6 +5,8 @@
 // Mobile (< md): sidebar in a drawer, Chat / Kit tabs.
 // T15 edits: ✕ / Undo / inline budget+deadline → POST /api/kit/adjust (new version); Add anyway / take out / Fit to
 // budget / its Undo → POST /api/kit/price (selection saved on the latest version, so a reload keeps it).
+// T17: answer turns (thread.messages) in the chat, follow-up pills (swap ⇒ price + a local "⚙ Switched … · Undo"
+// turn; other ⇒ refine), the 💛 card's Switch to this (price + Undo), "Deliver to" from the THREAD's persona.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -12,6 +14,7 @@ import { Menu, X } from "lucide-react";
 import type {
   BasketOption,
   FitSuggestion,
+  FollowUp,
   KitChange,
   KitSelection,
   KitStreamEvent,
@@ -21,7 +24,10 @@ import type {
   ThreadResponse,
 } from "@/contract";
 import { kitApi } from "@/lib/client/kit-api";
-import { applyEvent, runAsVersion, runSummary, startRun, type RunRequest, type RunState } from "@/lib/client/kit-run";
+import { applyEvent, panelVersions as withRunVersion, runSummary, startRun, type RunRequest, type RunState } from "@/lib/client/kit-run";
+import { switchedText, type LocalTurn } from "@/lib/client/kit-chat";
+import { deliverTo } from "@/lib/client/persona";
+import { usePersona } from "@/lib/client/persona-store";
 import { useCart } from "@/lib/client/cart-store";
 import { withFit, withoutPick, withPick } from "@/lib/client/kit-edits";
 import { ChatColumn } from "./ChatColumn";
@@ -37,11 +43,37 @@ function demoNow(demoToday: string): string {
 
 const hasEdits = (s: KitSelection | null) => !!s && (Object.keys(s.picks).length > 0 || s.dropped.length > 0);
 
+/** The title of `productId` anywhere in a version's options (line, alternative, closest, cart interest). */
+function productTitle(v: KitVersion | undefined, productId: string): string {
+  for (const o of v?.options ?? []) {
+    for (const l of o.lines) {
+      if (l.product.id === productId) return l.product.title;
+      const a = l.alternatives.find((x) => x.product.id === productId);
+      if (a) return a.product.title;
+    }
+    const c = o.noMatch.find((n) => n.closest?.candidate.product.id === productId);
+    if (c) return c.closest!.candidate.product.title;
+    const i = o.interests?.find((x) => x.candidate.product.id === productId);
+    if (i) return i.candidate.product.title;
+  }
+  return productId;
+}
+
+/** Undo for the last price edit (Fit to budget, 💛 switch, follow-up swap); key = `${version}:${profile}`. */
+interface PriceUndo {
+  key: string;
+  selection: KitSelection;
+  text: string;
+  /** The local chat turn whose Undo this is (follow-up swap). */
+  turnId?: string;
+}
+
 export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }: { threadId?: string; initialQuery?: string; demoToday: string }) {
   const api = useMemo(kitApi, []);
   const router = useRouter();
   const pathname = usePathname();
   const { add } = useCart();
+  const persona = usePersona();
 
   const [threads, setThreads] = useState<KitThreadSummary[]>([]);
   const [threadId, setThreadId] = useState<string | null>(initialThreadId ?? null);
@@ -52,8 +84,10 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [overrides, setOverrides] = useState<Record<string, BasketOption>>({});
   const [selection, setSelection] = useState<KitSelection | null>(null);
-  /** The selection before the last Fit to budget click, for its Undo; key = `${version}:${profile}`. */
-  const [fitUndo, setFitUndo] = useState<{ key: string; selection: KitSelection } | null>(null);
+  /** The selection before the last Fit to budget / cart switch, for its Undo. */
+  const [priceUndo, setPriceUndo] = useState<PriceUndo | null>(null);
+  /** Follow-up swaps made in this page view (no saved turn), per thread. */
+  const [localTurns, setLocalTurns] = useState<(LocalTurn & { threadId: string })[]>([]);
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"chat" | "kit">("chat");
@@ -158,15 +192,15 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
       setOverrides({});
       setSelection(null);
       setViewVersion(null);
+      setPriceUndo(null);
     }
     // only react to navigation
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   const savedVersions = thread?.versions ?? [];
-  const provisional = run ? runAsVersion(run) : null;
-  const panelVersions =
-    provisional && !savedVersions.some((v) => v.version === provisional.version) ? [...savedVersions, provisional] : savedVersions;
+  const panelVersions = withRunVersion(savedVersions, run);
+  const provisional = panelVersions.length > savedVersions.length;
   const streaming = run?.status === "running";
   const busy = streaming || editBusy;
   const activeThreadId = thread?.thread.id ?? run?.threadId ?? threadId;
@@ -180,7 +214,7 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
     setRun(null);
     setViewVersion(null);
     setSelection(null);
-    setFitUndo(null);
+    setPriceUndo(null);
   };
 
   const edit = async (fn: () => Promise<void>) => {
@@ -223,29 +257,52 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
 
   const onRestore = (version: number) => adjust({ type: "restore_version", version });
 
-  /** Re-price `next` on the server; the panel shows the returned option. `undo` = keep the old selection for Fit's Undo. */
-  const price = (version: number, next: KitSelection, undo?: KitSelection) => {
+  /** Re-price `next` on the server; the panel shows the returned option. `undo` = keep the old selection for Undo. */
+  const price = (version: number, next: KitSelection, undo?: Omit<PriceUndo, "key">, onFail?: () => void) => {
     const id = activeThreadId;
     if (!id) return;
     void edit(async () => {
-      const option = await api.price(id, next);
-      setOverrides((o) => ({ ...o, [`${version}:${next.profile}`]: option }));
-      setSelection(next);
-      setFitUndo(undo ? { key: `${version}:${next.profile}`, selection: undo } : null);
+      try {
+        const option = await api.price(id, next);
+        setOverrides((o) => ({ ...o, [`${version}:${next.profile}`]: option }));
+        setSelection(next);
+        setPriceUndo(undo ? { ...undo, key: `${version}:${next.profile}` } : null);
+      } catch (e) {
+        onFail?.();
+        throw e;
+      }
     });
   };
+  const before = (profile: Profile): KitSelection => (selection?.profile === profile ? selection : { profile, picks: {}, dropped: [] });
 
   const onSwap = (version: number, profile: Profile, itemKey: string, productId: string) =>
     price(version, withPick(selection, profile, itemKey, productId));
   const onAddAnyway = onSwap;
   const onTakeOut = (version: number, profile: Profile, itemKey: string) => price(version, withoutPick(selection, profile, itemKey));
-  const onFit = (version: number, profile: Profile, fit: FitSuggestion) => {
-    const before: KitSelection = selection?.profile === profile ? selection : { profile, picks: {}, dropped: [] };
-    price(version, withFit(selection, profile, fit), before);
+  const onFit = (version: number, profile: Profile, fit: FitSuggestion) =>
+    price(version, withFit(selection, profile, fit), { selection: before(profile), text: "Basket edited to fit your budget." });
+  const onUndoPrice = () => {
+    if (!priceUndo) return;
+    price(Number(priceUndo.key.split(":")[0]), priceUndo.selection);
   };
-  const onUndoFit = () => {
-    if (!fitUndo) return;
-    price(Number(fitUndo.key.split(":")[0]), fitUndo.selection);
+  /** 💛 card: the cart product becomes the item's pick (D40). */
+  const onSwitchInterest = (version: number, profile: Profile, itemKey: string, productId: string) => {
+    const v = savedVersions.find((x) => x.version === version);
+    const text = `${switchedText(itemKey, productTitle(v, productId))}.`;
+    price(version, withPick(selection, profile, itemKey, productId), { selection: before(profile), text });
+  };
+  /** Follow-up swap pill: no AI — the pill text as a user bubble, then a price call and "⚙ Switched … · Undo". */
+  const onFollowUpSwap = (text: string, action: NonNullable<FollowUp["suggestions"][number]["action"]>) => {
+    const latest = savedVersions[savedVersions.length - 1];
+    const id = activeThreadId;
+    if (!latest || !id) return;
+    const profile: Profile = selection?.profile ?? "balanced";
+    const turnId = `swap-${Date.now().toString(36)}`;
+    const systemText = switchedText(action.itemKey, productTitle(latest, action.productId));
+    setLocalTurns((t) => [...t, { id: turnId, threadId: id, createdAt: demoNow(demoToday), userText: text, systemText, undoable: true }]);
+    price(latest.version, withPick(selection, profile, action.itemKey, action.productId), { selection: before(profile), text: `${systemText}.`, turnId }, () =>
+      setLocalTurns((t) => t.map((x) => (x.id === turnId ? { ...x, systemText: "That switch did not go through. Your kit is unchanged." } : x))),
+    );
   };
 
   const onAddToCart = (option: BasketOption) => {
@@ -260,6 +317,9 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
   };
 
   const nowIso = demoNow(demoToday);
+  // "Deliver to" follows the thread's persona (a new kit's is the current cookie persona).
+  const threadPersonaId = thread?.thread.persona ?? persona?.current?.persona.id ?? null;
+  const threadAddress = threadPersonaId ? deliverTo(persona?.known[threadPersonaId]) : null;
 
   if (load === "notfound" || load === "error") {
     return (
@@ -326,6 +386,12 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
           <p className="p-6 text-center text-sm text-gray-400">Loading your kit…</p>
         ) : (
           <ChatColumn
+            messages={thread?.messages ?? []}
+            localTurns={localTurns
+              .filter((t) => t.threadId === activeThreadId)
+              .map((t) => ({ ...t, undoable: !!priceUndo && priceUndo.turnId === t.id }))}
+            onFollowUpSwap={onFollowUpSwap}
+            onUndoLocal={onUndoPrice}
             versions={savedVersions}
             run={run}
             summaries={summaries}
@@ -354,8 +420,12 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
           onAddAnyway={onAddAnyway}
           onTakeOut={onTakeOut}
           onFit={onFit}
-          onUndoFit={onUndoFit}
-          fitUndoKey={fitUndo?.key ?? null}
+          onUndoFit={onUndoPrice}
+          fitUndoKey={priceUndo?.key ?? null}
+          undoText={priceUndo?.text}
+          onSwitchInterest={onSwitchInterest}
+          activeProfile={selection?.profile ?? null}
+          deliverTo={threadAddress}
           onSetBudget={(budget) => adjust({ type: "set_budget", budget })}
           onSetDeadline={(deadline) => adjust({ type: "set_deadline", deadline })}
         />
