@@ -127,6 +127,9 @@ export function postProcessPlan(raw: PlannerOutput, today: string): KitPlan {
   if (raw.event === "back_to_school" && deadline === nextSchoolOpening(today)) {
     // D45 chip written by code: the model paraphrased it differently run to run (rehearsal 2), the demo checks it
     assumptions = [SCHOOL_CHIP[raw.language], ...assumptions.filter((a) => !SCHOOL_DATE.test(a))];
+  } else if (raw.event === "back_to_school" && deadline !== null) {
+    // another deadline (express Sep 4): a "By Sep 5" chip copied from the previous plan is now wrong
+    assumptions = assumptions.filter((a) => !SCHOOL_DATE.test(a));
   }
   return {
     event: raw.event,

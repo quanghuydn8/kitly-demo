@@ -64,6 +64,14 @@ describe("buildSalesContext: hero kit", () => {
     expect(far.ctx.hooks).not.toContain("deadline_soon");
   });
 
+  // rehearsal 2 (31/10): after "express delivery" (deadline = today + 2, D44) the follow-up offered express again
+  it("an express deadline (≤ today + 2) is already the fast option ⇒ no deadline_soon hook", async () => {
+    const express = await heroContext("lan", sloppyHeroPlan({ deadline: "2026-09-04" }));
+    expect(express.ctx.daysLeft).toBe(2);
+    expect(express.ctx.hooks).not.toContain("deadline_soon");
+    expect(express.ctx.hooks[0]).toBe("cart_interest");
+  });
+
   it("freeship gap: a shop group below FREESHIP's 200k min spend by ≤ 100k is listed, with the hook", async () => {
     const { w, option } = await heroContext("guest");
     const g = { shopId: "shop-x", shopName: "Tiny Shop", subtotal: 150_000, shipping: 20_000, shopDiscount: 0, voucherCodes: [] };

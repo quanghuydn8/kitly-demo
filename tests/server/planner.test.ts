@@ -108,6 +108,12 @@ describe("planKit: the school-opening chip is code-made (D45)", () => {
     expect(para.assumptions).toEqual(["By Sep 5 (school opening)", "1 child"]);
   });
 
+  it("a back_to_school plan whose deadline is no longer Sep 5 (express) drops the stale school-opening chip", async () => {
+    const raw = { ...sloppyHeroPlan({ deadline: "2026-09-04" }), assumptions: ["By Sep 5 (school opening)", "1 child", "Express delivery"] };
+    const plan = await planKit(new FakeLLM({ structured: [raw] }), HERO, { today: TODAY });
+    expect(plan.assumptions).toEqual(["1 child", "Express delivery"]);
+  });
+
   it("other deadlines or events are left alone", async () => {
     const express = await planKit(
       new FakeLLM({ structured: [{ ...sloppyHeroPlan({ deadline: "2026-09-04" }), assumptions: ["Express delivery"] }] }),

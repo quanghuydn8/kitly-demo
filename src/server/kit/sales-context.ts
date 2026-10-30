@@ -5,8 +5,14 @@ import type { BasketOption, KitPlan, Persona, SalesContext, SalesHook, Shop, Vou
 import { walletLabel } from "@/server/optimizer/labels";
 import { daysBetween } from "@/server/today";
 
-/** deadline_soon = daysLeft ≤ 3; voucher_expiring = a wallet voucher that expires within 3 days. */
+/**
+ * deadline_soon = daysLeft ≤ 3 AND the deadline is later than the express deadline (today + 2, D44): an express kit is
+ * already the fast option, offering express again was a loop (rehearsal 2). voucher_expiring = a wallet voucher that
+ * expires within 3 days.
+ */
 export const SOON_DAYS = 3;
+/** "Express" / "hoả tốc" sets the deadline to today + 2 (D44, planner rule). */
+export const EXPRESS_DAYS = 2;
 /** A shop group is a freeship gap when it misses FREESHIP's min spend by at most this much. */
 export const FREESHIP_GAP_MAX = 100_000;
 
@@ -76,7 +82,7 @@ export function buildSalesContext(
     : [];
 
   const hooks: SalesHook[] = [];
-  if (daysLeft !== null && daysLeft >= 0 && daysLeft <= SOON_DAYS) hooks.push("deadline_soon");
+  if (daysLeft !== null && daysLeft > EXPRESS_DAYS && daysLeft <= SOON_DAYS) hooks.push("deadline_soon");
   if (interests.length) hooks.push("cart_interest");
   if (walletVouchers.some((v) => v.daysToExpiry >= 0 && v.daysToExpiry <= SOON_DAYS)) hooks.push("voucher_expiring");
   if (freeshipGaps.length) hooks.push("freeship_gap");
