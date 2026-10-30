@@ -6,7 +6,7 @@ import type { EventType, KitPlan, PlanItem, Product } from "@/contract";
 import { CATEGORIES, CONTEXT_TAGS } from "@/contract";
 import { addDays } from "@/server/today";
 import { countMatches } from "./matched";
-import { rng, type Rng } from "./rng";
+import { rng } from "./rng";
 
 export interface SeedDemandItem {
   needLabel: string;
@@ -113,10 +113,19 @@ const COMBO = ["school-backpack", "water-bottle", "lunch-box"];
 
 const round10k = (n: number) => Math.round(n / 10000) * 10000;
 
-/** Uniform on [p25 − h/2, p75 + h/2] (h = p75 − p25) has exactly that p25–p75. */
-function bandHint(r: Rng, [p25, p75]: [number, number]): number {
-  const h = p75 - p25;
-  return round10k(p25 - h / 2 + r.next() * 2 * h);
+/**
+ * n budget hints whose p25 and p75 are EXACTLY the band, for any n and any percentile interpolation, also after the
+ * Beat 1 live query adds one more hint inside the band: 30% sit on p25, 30% on p75, the rest spread between them
+ * (buyers write round limits like "under 300k"). Random draws only matched the band on average (rehearsal 2: 280k).
+ */
+export function bandHints(n: number, [p25, p75]: [number, number]): number[] {
+  const edge = Math.ceil(n * 0.3);
+  const middle = Math.max(0, n - 2 * edge);
+  return Array.from({ length: n }, (_, k) => {
+    if (k < edge) return p25;
+    if (k >= n - edge) return p75;
+    return round10k(p25 + ((k - edge + 1) * (p75 - p25)) / (middle + 1));
+  });
 }
 
 export function generateDemand(opts: { catalog: Product[]; today: string; seed?: number }): SeedSession[] {
@@ -213,13 +222,14 @@ export function generateDemand(opts: { catalog: Product[]; today: string; seed?:
       const pool = r.shuffle(
         sessions.filter((s) => s.event === "back_to_school" && weekOf(s.createdAt, today) === week),
       );
-      for (const s of pool.slice(0, n)) {
+      const hints = f.band ? r.shuffle(bandHints(n, f.band)) : [];
+      for (const [k, s] of pool.slice(0, n).entries()) {
         const forced: SeedDemandItem = {
           needLabel: f.needLabel,
           category: f.category,
           tags: [...f.tags],
           matchedCount: countMatches(catalog, f.category, f.tags),
-          budgetHint: f.band ? bandHint(r, f.band) : null,
+          budgetHint: f.band ? hints[k] : null,
         };
         const i = s.items.findIndex((x) => x.category === f.category);
         if (i >= 0) s.items[i] = forced;

@@ -51,22 +51,26 @@ describe("generateDemand (DATA.md §5)", () => {
       }
   });
 
-  it("forced needs have the DATA.md budget-hint p25–p75 band", () => {
+  it("forced needs have EXACTLY the DATA.md budget-hint p25–p75 band (Beat 3 reads it aloud)", () => {
+    // rehearsal 2 (31/10): uniform random hints gave the seller card 280.000₫–400.000₫ instead of 300k–400k
     const hints = (cat: string) =>
       sessions
         .flatMap((s) => s.items)
         .filter((i) => i.category === cat && i.tags.length === 1 && FORCED_NEEDS.some((f) => f.tags[0] === i.tags[0]))
         .map((i) => i.budgetHint!)
         .sort((a, b) => a - b);
-    const q = (xs: number[], p: number) => xs[Math.floor((xs.length - 1) * p)];
-    const bp = hints("school-backpack");
-    expect(q(bp, 0.25)).toBeGreaterThanOrEqual(270000);
-    expect(q(bp, 0.25)).toBeLessThanOrEqual(330000);
-    expect(q(bp, 0.75)).toBeGreaterThanOrEqual(370000);
-    expect(q(bp, 0.75)).toBeLessThanOrEqual(430000);
-    const rc = hints("kids-raincoat");
-    expect(q(rc, 0.25)).toBeGreaterThanOrEqual(105000);
-    expect(q(rc, 0.75)).toBeLessThanOrEqual(195000);
+    // both neighbours of the percentile position, so any interpolation gives the same answer
+    const q = (xs: number[], p: number) => [xs[Math.floor((xs.length - 1) * p)], xs[Math.ceil((xs.length - 1) * p)]];
+    for (const f of FORCED_NEEDS) {
+      if (!f.band || f.category === null) continue;
+      const xs = hints(f.category);
+      expect(q(xs, 0.25)).toEqual([f.band[0], f.band[0]]);
+      expect(q(xs, 0.75)).toEqual([f.band[1], f.band[1]]);
+      // one more live hint inside the band (Beat 1) keeps the band
+      const live = [...xs, f.band[1]].sort((a, b) => a - b);
+      expect(q(live, 0.25)).toEqual([f.band[0], f.band[0]]);
+      expect(q(live, 0.75)).toEqual([f.band[1], f.band[1]]);
+    }
   });
 
   it("pet items are null-category with varied labels, unmet", () => {
