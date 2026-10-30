@@ -24,7 +24,9 @@ import { basketTabs, defaultTabId } from "@/lib/client/kit-compare";
 import { closestMatchLabel, parseBudgetInput } from "@/lib/client/kit-edits";
 import { kAmount, missingLabel, noMatchSentence, overMaxLabel } from "@/lib/client/kit-text";
 import { formatCount, formatShortDate, formatVnd } from "@/lib/client/format";
+import { demandGapKey } from "@/lib/client/seller-text";
 import { MiniProduct } from "./MiniProduct";
+import { NotifyMe } from "./NotifyMe";
 
 export interface KitPanelProps {
   versions: KitVersion[];
@@ -429,8 +431,9 @@ function VersionBody({
             </summary>
             <ul className="flex flex-wrap gap-1.5 px-3 pb-3">
               {notInStore.map((n) => (
-                <li key={n.itemKey} className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs text-gray-700">
+                <li key={n.itemKey} className="flex items-center gap-1.5 rounded-full bg-gray-100 py-0.5 pl-2.5 pr-1 text-xs text-gray-700">
                   {n.needLabel}
+                  <NotifyMe gapKey={gapKeyOf(v.plan, n.itemKey)} needLabel={n.needLabel} />
                 </li>
               ))}
             </ul>
@@ -585,12 +588,17 @@ function NoMatchRow({
               Add anyway
             </button>
           )}
+          <NotifyMe gapKey={gapKeyOf(plan, row.itemKey)} needLabel={row.needLabel} />
         </div>
       </div>
       {extra}
     </li>
   );
 }
+
+/** The insights gap key of a noMatch item (an item missing from the plan counts as not in catalog). */
+const gapKeyOf = (plan: KitPlan, itemKey: string) =>
+  demandGapKey(plan.items.find((i) => i.key === itemKey) ?? { category: null, mustHaveTags: [] });
 
 /** "💛 In your cart" (D40): the cart product, its price after the wallet/shop voucher, what it lacks, Switch to this. */
 function InterestCard({
