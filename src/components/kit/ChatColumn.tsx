@@ -13,7 +13,7 @@ import type { FollowUp, KitMessage, KitPlan, KitVersion } from "@/contract";
 import { runSummary, runUserText, type RunState } from "@/lib/client/kit-run";
 import { assumptionCorrection, undoableRemoval } from "@/lib/client/kit-edits";
 import { chatTurns, type LocalTurn } from "@/lib/client/kit-chat";
-import { budgetChoiceLabel, clarifyQuestion, DEFAULT_BUDGET_CHOICES } from "@/lib/client/kit-text";
+import { budgetChoiceLabel, clarifyQuestion, DEFAULT_BUDGET_CHOICES, diffChips } from "@/lib/client/kit-text";
 import { Timeline } from "./Timeline";
 
 export const EXAMPLES: { event: string; text: string }[] = [
@@ -184,6 +184,20 @@ function Clarify({
   );
 }
 
+/** T13: what a refine changed in the plan, as chips above its explanation. */
+function DiffChips({ chips }: { chips: string[] }) {
+  if (chips.length === 0) return null;
+  return (
+    <ul aria-label="What changed" className="flex flex-wrap gap-1.5">
+      {chips.map((c) => (
+        <li key={c} className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+          {c}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function SystemLine({ text, onUndo, busy }: { text: string; onUndo?(): void; busy?: boolean }) {
   return (
     <li className="text-center text-xs text-gray-500">
@@ -297,6 +311,7 @@ export function ChatColumn({
             <UserBubble key={`u${v.version}`} text={v.userText} />,
             <Assistant key={`a${v.version}`}>
               <p className="text-xs text-gray-500">{summaries[v.version] ?? `Planned ${v.plan.items.length} items`}</p>
+              <DiffChips chips={diffChips(v, versions.find((x) => x.version === v.version - 1))} />
               {v.explanation && <p className="whitespace-pre-wrap">{v.explanation}</p>}
               <Chips plan={v.plan} busy={busy} onCorrect={v === lastAssistant && !liveRun ? onSend : undefined} />
               {awaiting && v === last && !liveRun && (

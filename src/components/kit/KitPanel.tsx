@@ -67,10 +67,9 @@ export interface KitPanelProps {
 export function KitPanel(props: KitPanelProps) {
   const { versions, viewVersion, building } = props;
   if (versions.length === 0) {
+    if (building) return <KitSkeleton label="Building your kit…" withHeader />;
     return (
-      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-400">
-        {building ? "Building your kit…" : "Your kit will appear here."}
-      </div>
+      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-400">Your kit will appear here.</div>
     );
   }
   const latest = versions[versions.length - 1];
@@ -112,10 +111,46 @@ export function KitPanel(props: KitPanelProps) {
         {v.status === "awaiting_budget" ? (
           <p className="rounded-lg border border-dashed bg-white p-6 text-center text-sm text-gray-500">Waiting for your budget</p>
         ) : v.options.length === 0 ? (
-          <p className="rounded-lg border border-dashed bg-white p-6 text-center text-sm text-gray-500">Comparing products…</p>
+          <KitSkeleton label="Comparing products…" />
         ) : (
           <VersionBody key={v.version} version={v} readOnly={readOnly} {...props} />
         )}
+      </div>
+    </div>
+  );
+}
+
+/** T13: placeholder with the kit's shape (header bar, 3 basket tabs, rows) so the basket replaces it in place. */
+function KitSkeleton({ label, withHeader = false }: { label: string; withHeader?: boolean }) {
+  const bar = "animate-pulse rounded bg-gray-200";
+  return (
+    <div role="status" aria-busy="true" aria-label={label} className="flex h-full flex-col">
+      {withHeader && (
+        <div className="flex items-center gap-3 border-b bg-white px-4 py-3">
+          <div className={`h-5 w-24 ${bar}`} />
+          <div className={`h-5 w-32 ${bar}`} />
+          <div className={`ml-auto h-7 w-28 ${bar}`} />
+        </div>
+      )}
+      <div className={withHeader ? "space-y-4 p-3 sm:p-4" : "space-y-4"}>
+        <p className="text-center text-xs text-gray-400">{label}</p>
+        <div className="grid gap-1.5 sm:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} data-skeleton="tab" className="h-12 animate-pulse rounded-lg border bg-white" />
+          ))}
+        </div>
+        <div className="divide-y rounded-xl border bg-white">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} data-skeleton="row" className="flex items-center gap-2.5 px-3 py-3">
+              <div className={`h-11 w-11 shrink-0 rounded-lg ${bar}`} />
+              <div className="flex-1 space-y-1.5">
+                <div className={`h-3.5 w-2/3 ${bar}`} />
+                <div className={`h-3 w-1/3 ${bar}`} />
+              </div>
+              <div className={`h-4 w-16 ${bar}`} />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -448,7 +483,15 @@ function VersionBody({
         </section>
       )}
 
-      <Totals option={option} budget={v.plan.budget} />
+      {option.lines.length > 0 ? (
+        <Totals option={option} budget={v.plan.budget} />
+      ) : (
+        <p className="rounded-xl border border-dashed bg-white p-4 text-center text-sm text-gray-500">
+          {exact.length > 0
+            ? "No exact matches yet. Add a closest product anyway, or tap Notify me."
+            : "Nothing for this kit is sold here yet. Tap Notify me and sellers will see the need."}
+        </p>
+      )}
 
       <button
         type="button"
@@ -492,7 +535,7 @@ function BasketRow({
       {closestLabel && <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700">{closestLabel}</p>}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <MiniProduct product={line.product} shop={line.shop} />
+          <MiniProduct product={line.product} shop={line.shop} needMatch={!closestLabel} />
         </div>
         <div className="shrink-0 text-right text-sm">
           <div className="font-semibold">{formatVnd(line.lineTotal)}</div>
@@ -528,7 +571,7 @@ function BasketRow({
               {line.alternatives.map((a) => (
                 <li key={a.product.id} className="flex items-center gap-2 rounded-lg bg-gray-50 p-2">
                   <div className="min-w-0 flex-1">
-                    <MiniProduct product={a.product} shop={a.shop} arrivesBy={a.arrivesBy} />
+                    <MiniProduct product={a.product} shop={a.shop} arrivesBy={a.arrivesBy} needMatch />
                   </div>
                   <button
                     type="button"

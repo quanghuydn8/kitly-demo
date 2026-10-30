@@ -1,12 +1,24 @@
 // Compact product card used in kit rows (no images: category icon tile, PRD UI).
+// `needMatch` (basket lines + alternatives, T13): the product fully matches the item, so a seller fix
+// (updatedForDemandAt) shows as "Updated for this need". Off for a closest product that still misses tags.
 import Link from "next/link";
 import { Star } from "lucide-react";
 import type { Product, Shop } from "@/contract";
 import { CategoryIcon } from "@/components/store/CategoryIcon";
-import { TierBadge } from "@/components/store/badges";
+import { TierBadge, UpdatedBadge } from "@/components/store/badges";
 import { formatShortDate, formatVnd } from "@/lib/client/format";
 
-export function MiniProduct({ product, shop, arrivesBy }: { product: Product; shop: Shop; arrivesBy?: string }) {
+export function MiniProduct({
+  product,
+  shop,
+  arrivesBy,
+  needMatch = false,
+}: {
+  product: Product;
+  shop: Shop;
+  arrivesBy?: string;
+  needMatch?: boolean;
+}) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
       <CategoryIcon category={product.category} className="h-11 w-11 shrink-0 rounded-lg" />
@@ -25,6 +37,7 @@ export function MiniProduct({ product, shop, arrivesBy }: { product: Product; sh
             {product.rating.toFixed(1)}
           </span>
           {arrivesBy && <span>Arrives {formatShortDate(arrivesBy)}</span>}
+          {needMatch && product.updatedForDemandAt && <UpdatedBadge />}
         </div>
       </div>
     </div>

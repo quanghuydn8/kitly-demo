@@ -1,6 +1,6 @@
 // Kitly text helpers (T11). The honest no-match sentence follows the PLAN language (en/vi); the rest is English
 // chrome. Pure functions, unit-tested.
-import type { BasketOption, KitPlan } from "@/contract";
+import type { BasketOption, KitPlan, KitVersion } from "@/contract";
 import { formatShortDate, formatVnd } from "./format";
 
 type NoMatch = BasketOption["noMatch"][number];
@@ -21,6 +21,32 @@ function viDate(iso: string): string {
   return `${d}/${m}`;
 }
 
+/** Vietnamese words for the canonical feature tags (context tags are never must-have). */
+const VI_TAG: Record<string, string> = {
+  "anti-hunchback": "chống gù",
+  lightweight: "siêu nhẹ",
+  waterproof: "chống nước",
+  "bpa-free": "không BPA",
+  insulated: "giữ nhiệt",
+  "leak-proof": "chống tràn",
+  "non-slip": "chống trượt",
+  "organic-cotton": "cotton hữu cơ",
+  foldable: "gấp gọn",
+  compact: "nhỏ gọn",
+  quiet: "êm",
+  "energy-saving": "tiết kiệm điện",
+  ergonomic: "công thái học",
+  adjustable: "điều chỉnh được",
+  wireless: "không dây",
+  "noise-cancelling": "chống ồn",
+  "uv-protection": "chống UV",
+  "reef-safe": "an toàn rạn san hô",
+  "2-person": "2 người",
+  "4-person": "4 người",
+  "anti-blue-light": "chống ánh sáng xanh",
+  "backpack-cover": "có áo trùm balo",
+};
+
 /** "No exact match: no anti-hunchback backpack under 400k" / "Chưa có balo chống gù dưới 400.000 ₫". */
 export function noMatchSentence(row: NoMatch, plan: KitPlan): string {
   const item = plan.items.find((i) => i.key === row.itemKey);
@@ -34,7 +60,13 @@ export function noMatchSentence(row: NoMatch, plan: KitPlan): string {
       : `No exact match: no ${need} arriving by ${formatShortDate(plan.deadline)}`;
   }
   const price = max === null ? "" : vi ? ` dưới ${formatVnd(max)}` : ` under ${kAmount(max)}`;
-  return vi ? `Chưa có ${need}${price}` : `No exact match: no ${need}${price}`;
+  // The planner's label may omit the must-have ("School backpack" / "Balo đi học"); the sentence must still say
+  // what is missing, so tags the label does not already mention are named (EN slug as words, VI via VI_TAG).
+  const tags = row.reason === "no_product_with_tags" ? (row.closest?.missingTags ?? item?.mustHaveTags ?? []) : [];
+  const flat = (s: string) => s.toLowerCase().replace(/[-\s]+/g, " ");
+  const words = tags.map((t) => (vi ? (VI_TAG[t] ?? t) : t)).filter((w) => !flat(need).includes(flat(w)));
+  if (vi) return `Chưa có ${[need, ...words].join(" ")}${price}`;
+  return `No exact match: no ${[...words, need].join(" ")}${price}`;
 }
 
 export function missingLabel(tags: string[]): string {
@@ -64,4 +96,15 @@ export function relativeTime(iso: string, nowIso: string): string {
   if (sec < 86_400) return `${Math.floor(sec / 3600)} h ago`;
   const days = Math.floor(sec / 86_400);
   return days === 1 ? "yesterday" : `${days} days ago`;
+}
+
+/** Refine diff chips (Beat 2: "Removed: uniform"): removed labels come from the previous plan, added/changed from this one. */
+export function diffChips(v: KitVersion, prev: KitVersion | undefined): string[] {
+  if (!v.diff) return [];
+  const label = (plan: KitPlan | undefined, key: string) => lowerFirst(plan?.items.find((i) => i.key === key)?.needLabel ?? key);
+  return [
+    ...v.diff.added.map((k) => `Added: ${label(v.plan, k)}`),
+    ...v.diff.removed.map((k) => `Removed: ${label(prev?.plan, k)}`),
+    ...v.diff.changed.map((k) => `Changed: ${label(v.plan, k)}`),
+  ];
 }

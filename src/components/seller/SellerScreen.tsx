@@ -3,8 +3,10 @@
 // gap cards in API order (never re-sorted here), combos + top needs by event, Refresh, and the listing-fix flow
 // (Preview fix → drawer → Apply → toast; Undo). After Apply/Undo the insights are RE-FETCHED: the "Fixed · Undo" state
 // comes from `gap.appliedFix`, so it is the same after a reload. Insights re-fetch every 10 s while the tab is visible.
+// "Back to buyer" (T13) → /kit, the buyer's latest kit (Beat 4 starts there with + New kit).
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BarChart3, Loader2, RefreshCw, Store } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, BarChart3, Loader2, RefreshCw, Store } from "lucide-react";
 import { categoryById, EVENTS, type EnrichmentPreviewResponse, type InsightsResponse, type Shop } from "@/contract";
 import { sellerApi } from "@/lib/client/seller-api";
 import { demoNowMs, kpis } from "@/lib/client/seller-text";
@@ -153,9 +155,16 @@ export function SellerScreen({ initialShopId, demoToday }: { initialShopId: stri
           <RefreshCw aria-hidden className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </button>
+        <Link
+          href="/kit"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--kitly-accent)] px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+        >
+          <ArrowLeft aria-hidden className="h-4 w-4" />
+          Back to buyer
+        </Link>
       </div>
 
-      <LiveStrip recent={data?.recent ?? []} now={now} />
+      <LiveStrip recent={data?.recent ?? (error ? [] : null)} now={now} />
 
       {error && (
         <div role="alert" className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">

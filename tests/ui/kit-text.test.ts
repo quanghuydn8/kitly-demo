@@ -70,6 +70,29 @@ describe("noMatchSentence", () => {
     );
   });
 
+  it("English: a label without the must-have tag still names it (planner labelled it 'School backpack', T13 demo walk)", () => {
+    expect(noMatchSentence(row("backpack", "School backpack", "no_product_with_tags"), planEn)).toBe(
+      "No exact match: no anti-hunchback school backpack under 400k",
+    );
+    // a tag already in the label (spaces or hyphens) is not repeated
+    expect(noMatchSentence(row("backpack", "Anti hunchback backpack", "no_product_with_tags"), planEn)).toBe(
+      "No exact match: no anti hunchback backpack under 400k",
+    );
+    // other reasons keep the label as is
+    expect(noMatchSentence(row("backpack", "School backpack", "none_in_time"), planEn)).toBe(
+      "No exact match: no school backpack arriving by Sep 5",
+    );
+  });
+
+  it("Vietnamese: a label without the must-have gets the tag in Vietnamese; a label that has it is unchanged", () => {
+    expect(noMatchSentence(row("backpack", "Balo đi học", "no_product_with_tags"), planVi)).toBe(
+      "Chưa có balo đi học chống gù dưới 400.000 ₫",
+    );
+    expect(noMatchSentence(row("backpack", "Balo chống gù", "no_product_with_tags"), planVi)).toBe(
+      "Chưa có balo chống gù dưới 400.000 ₫",
+    );
+  });
+
   it("deadline reason mentions the deadline; no max price ⇒ no price clause", () => {
     expect(noMatchSentence(row("shoes", "School shoes", "none_in_time"), planEn)).toBe(
       "No exact match: no school shoes arriving by Sep 5",
