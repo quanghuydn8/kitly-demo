@@ -1,0 +1,35 @@
+// Storefront product card (T10): icon tile, 2-line title, price, rating, reviews, sold, shop tier/voucher/updated badges.
+import Link from "next/link";
+import { Star } from "lucide-react";
+import type { ProductWithShop } from "@/contract";
+import { formatCount, formatVnd } from "@/lib/client/format";
+import { CategoryIcon } from "./CategoryIcon";
+import { TierBadge, UpdatedBadge, VoucherBadge } from "./badges";
+
+export function ProductCard({ product, hasVoucher }: { product: ProductWithShop; hasVoucher: boolean }) {
+  return (
+    <Link
+      href={`/p/${product.id}`}
+      className="flex h-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <CategoryIcon category={product.category} className="aspect-square w-full" />
+      <div className="flex flex-1 flex-col gap-1.5 p-2.5">
+        <div className="flex flex-wrap gap-1">
+          <TierBadge tier={product.shop.tier} />
+          {hasVoucher && <VoucherBadge />}
+          {product.updatedForDemandAt && <UpdatedBadge />}
+        </div>
+        <h3 className="line-clamp-2 text-sm leading-snug text-gray-800">{product.title}</h3>
+        <div className="mt-auto text-base font-semibold text-[var(--kitly-accent)]">{formatVnd(product.price)}</div>
+        <div className="flex items-center justify-between gap-1 text-xs text-gray-500">
+          <span className="flex items-center gap-0.5">
+            <Star aria-hidden className="h-3 w-3 fill-amber-400 text-amber-400" />
+            <span>{product.rating.toFixed(1)}</span>
+            <span>({formatCount(product.reviewCount)})</span>
+          </span>
+          <span>{formatCount(product.soldCount)} sold</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
