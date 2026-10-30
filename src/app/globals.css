@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+:root {
+  --kitly-accent: #ee4d2d;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}

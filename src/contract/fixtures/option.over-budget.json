@@ -1,0 +1,420 @@
+{
+  "profile": "balanced",
+  "status": "over_budget",
+  "lines": [
+    {
+      "itemKey": "notebooks",
+      "product": {
+        "id": "prod-kidzone-notebooks",
+        "shopId": "shop-kidzone",
+        "title": "KidZone Premium Notebook Pack (8 books)",
+        "category": "notebooks",
+        "description": "Eight 80-page notebooks with laminated covers. 120 gsm acid-free paper.",
+        "price": 79000,
+        "rating": 4.9,
+        "reviewCount": 640,
+        "soldCount": 2100,
+        "stock": 100,
+        "tags": [
+          "grade-1",
+          "premium"
+        ],
+        "attributes": {
+          "pages": "80",
+          "pack": "8"
+        },
+        "shipDaysMin": 1,
+        "shipDaysMax": 2,
+        "updatedForDemandAt": null
+      },
+      "shop": {
+        "id": "shop-kidzone",
+        "name": "KidZone Mall",
+        "tier": "mall",
+        "rating": 4.9,
+        "shipFee": 30000,
+        "city": "HCMC"
+      },
+      "quantity": 1,
+      "lineTotal": 79000,
+      "reason": "Best value for the rating, arrives Sep 4",
+      "alternatives": [
+        {
+          "product": {
+            "id": "prod-minhan-notebooks",
+            "shopId": "shop-minhan",
+            "title": "Minh An Grade 1 Notebook Set (10 books, 4-line ruling)",
+            "category": "notebooks",
+            "description": "Ten 48-page notebooks with 4-line ruling for handwriting practice. 100 gsm paper, no ink bleed.",
+            "price": 45000,
+            "rating": 4.7,
+            "reviewCount": 1520,
+            "soldCount": 8200,
+            "stock": 100,
+            "tags": [
+              "grade-1",
+              "budget"
+            ],
+            "attributes": {
+              "pages": "48",
+              "pack": "10"
+            },
+            "shipDaysMin": 1,
+            "shipDaysMax": 2,
+            "updatedForDemandAt": null
+          },
+          "shop": {
+            "id": "shop-minhan",
+            "name": "Minh An Stationery",
+            "tier": "preferred",
+            "rating": 4.8,
+            "shipFee": 25000,
+            "city": "Hanoi"
+          },
+          "score": 0.828,
+          "matchedTags": [
+            "grade-1"
+          ],
+          "arrivesBy": "2026-09-04"
+        }
+      ]
+    },
+    {
+      "itemKey": "pencils",
+      "product": {
+        "id": "prod-kidzone-pens",
+        "shopId": "shop-kidzone",
+        "title": "KidZone Ergonomic Fountain Pen Set for Beginners",
+        "category": "pencils-pens",
+        "description": "Two beginner fountain pens with ergonomic grip and 6 ink cartridges. Smooth 0.5 mm nib.",
+        "price": 65000,
+        "rating": 4.8,
+        "reviewCount": 410,
+        "soldCount": 1500,
+        "stock": 100,
+        "tags": [
+          "kids",
+          "ergonomic",
+          "grade-1"
+        ],
+        "attributes": {
+          "pack": "2 pens + 6 cartridges"
+        },
+        "shipDaysMin": 1,
+        "shipDaysMax": 2,
+        "updatedForDemandAt": null
+      },
+      "shop": {
+        "id": "shop-kidzone",
+        "name": "KidZone Mall",
+        "tier": "mall",
+        "rating": 4.9,
+        "shipFee": 30000,
+        "city": "HCMC"
+      },
+      "quantity": 1,
+      "lineTotal": 65000,
+      "reason": "Best value for the rating, arrives Sep 4",
+      "alternatives": [
+        {
+          "product": {
+            "id": "prod-minhan-pencils",
+            "shopId": "shop-minhan",
+            "title": "Minh An 2B Pencil Set (12 pcs) with Sharpener",
+            "category": "pencils-pens",
+            "description": "Twelve 2B graphite pencils with a sharpener and two erasers. Triangular grip for small hands.",
+            "price": 32000,
+            "rating": 4.6,
+            "reviewCount": 980,
+            "soldCount": 5400,
+            "stock": 100,
+            "tags": [
+              "kids",
+              "grade-1"
+            ],
+            "attributes": {
+              "pack": "12"
+            },
+            "shipDaysMin": 1,
+            "shipDaysMax": 2,
+            "updatedForDemandAt": null
+          },
+          "shop": {
+            "id": "shop-minhan",
+            "name": "Minh An Stationery",
+            "tier": "preferred",
+            "rating": 4.8,
+            "shipFee": 25000,
+            "city": "Hanoi"
+          },
+          "score": 0.79,
+          "matchedTags": [
+            "grade-1",
+            "kids"
+          ],
+          "arrivesBy": "2026-09-04"
+        }
+      ]
+    },
+    {
+      "itemKey": "water-bottle",
+      "product": {
+        "id": "prod-minhan-bottle",
+        "shopId": "shop-minhan",
+        "title": "Minh An Kids Water Bottle 500 ml",
+        "category": "water-bottle",
+        "description": "500 ml Tritan bottle with flip straw and lock. BPA-free and leak-proof in a school bag.",
+        "price": 89000,
+        "rating": 4.7,
+        "reviewCount": 860,
+        "soldCount": 4100,
+        "stock": 100,
+        "tags": [
+          "kids",
+          "bpa-free",
+          "leak-proof"
+        ],
+        "attributes": {
+          "volume": "500 ml"
+        },
+        "shipDaysMin": 1,
+        "shipDaysMax": 2,
+        "updatedForDemandAt": null
+      },
+      "shop": {
+        "id": "shop-minhan",
+        "name": "Minh An Stationery",
+        "tier": "preferred",
+        "rating": 4.8,
+        "shipFee": 25000,
+        "city": "Hanoi"
+      },
+      "quantity": 1,
+      "lineTotal": 89000,
+      "reason": "Best value for the rating, arrives Sep 4",
+      "alternatives": [
+        {
+          "product": {
+            "id": "prod-kidzone-bottle",
+            "shopId": "shop-kidzone",
+            "title": "KidZone Insulated Steel Bottle 450 ml",
+            "category": "water-bottle",
+            "description": "Double-wall stainless steel keeps water cold 12 hours. BPA-free lid with silicone spout.",
+            "price": 189000,
+            "rating": 4.9,
+            "reviewCount": 1100,
+            "soldCount": 3800,
+            "stock": 100,
+            "tags": [
+              "kids",
+              "bpa-free",
+              "insulated",
+              "leak-proof"
+            ],
+            "attributes": {
+              "volume": "450 ml"
+            },
+            "shipDaysMin": 1,
+            "shipDaysMax": 2,
+            "updatedForDemandAt": null
+          },
+          "shop": {
+            "id": "shop-kidzone",
+            "name": "KidZone Mall",
+            "tier": "mall",
+            "rating": 4.9,
+            "shipFee": 30000,
+            "city": "HCMC"
+          },
+          "score": 0.928,
+          "matchedTags": [
+            "bpa-free",
+            "leak-proof"
+          ],
+          "arrivesBy": "2026-09-04"
+        }
+      ]
+    },
+    {
+      "itemKey": "lunch-box",
+      "product": {
+        "id": "prod-minhan-lunchbox",
+        "shopId": "shop-minhan",
+        "title": "Minh An 3-Compartment Lunch Box",
+        "category": "lunch-box",
+        "description": "Three sealed compartments with a spoon and fork. Microwave safe, BPA-free, leak-proof lid.",
+        "price": 99000,
+        "rating": 4.6,
+        "reviewCount": 640,
+        "soldCount": 2900,
+        "stock": 100,
+        "tags": [
+          "kids",
+          "bpa-free",
+          "leak-proof"
+        ],
+        "attributes": {
+          "volume": "900 ml"
+        },
+        "shipDaysMin": 1,
+        "shipDaysMax": 2,
+        "updatedForDemandAt": null
+      },
+      "shop": {
+        "id": "shop-minhan",
+        "name": "Minh An Stationery",
+        "tier": "preferred",
+        "rating": 4.8,
+        "shipFee": 25000,
+        "city": "Hanoi"
+      },
+      "quantity": 1,
+      "lineTotal": 99000,
+      "reason": "Best value for the rating, arrives Sep 4",
+      "alternatives": [
+        {
+          "product": {
+            "id": "prod-kidzone-lunchbox",
+            "shopId": "shop-kidzone",
+            "title": "KidZone Thermal Lunch Box 2 Tiers",
+            "category": "lunch-box",
+            "description": "Two stainless steel tiers in an insulated case that keeps food warm 5 hours.",
+            "price": 219000,
+            "rating": 4.9,
+            "reviewCount": 520,
+            "soldCount": 1700,
+            "stock": 100,
+            "tags": [
+              "kids",
+              "insulated",
+              "leak-proof"
+            ],
+            "attributes": {
+              "volume": "2 x 450 ml"
+            },
+            "shipDaysMin": 1,
+            "shipDaysMax": 2,
+            "updatedForDemandAt": null
+          },
+          "shop": {
+            "id": "shop-kidzone",
+            "name": "KidZone Mall",
+            "tier": "mall",
+            "rating": 4.9,
+            "shipFee": 30000,
+            "city": "HCMC"
+          },
+          "score": 0.913,
+          "matchedTags": [
+            "leak-proof"
+          ],
+          "arrivesBy": "2026-09-04"
+        }
+      ]
+    },
+    {
+      "itemKey": "book-covers",
+      "product": {
+        "id": "prod-minhan-book-covers",
+        "shopId": "shop-minhan",
+        "title": "Minh An Clear Book Covers (20 pcs)",
+        "category": "book-covers",
+        "description": "Twenty clear plastic book covers for standard textbooks, with name labels.",
+        "price": 25000,
+        "rating": 4.6,
+        "reviewCount": 890,
+        "soldCount": 6100,
+        "stock": 100,
+        "tags": [
+          "budget"
+        ],
+        "attributes": {
+          "pack": "20"
+        },
+        "shipDaysMin": 1,
+        "shipDaysMax": 2,
+        "updatedForDemandAt": null
+      },
+      "shop": {
+        "id": "shop-minhan",
+        "name": "Minh An Stationery",
+        "tier": "preferred",
+        "rating": 4.8,
+        "shipFee": 25000,
+        "city": "Hanoi"
+      },
+      "quantity": 1,
+      "lineTotal": 25000,
+      "reason": "Best value for the rating, arrives Sep 4",
+      "alternatives": []
+    }
+  ],
+  "noMatch": [],
+  "skipped": [],
+  "shops": [
+    {
+      "shopId": "shop-kidzone",
+      "shopName": "KidZone Mall",
+      "subtotal": 144000,
+      "shipping": 30000,
+      "shopDiscount": 0,
+      "voucherCodes": []
+    },
+    {
+      "shopId": "shop-minhan",
+      "shopName": "Minh An Stationery",
+      "subtotal": 213000,
+      "shipping": 25000,
+      "shopDiscount": 0,
+      "voucherCodes": [
+        "FREESHIP"
+      ]
+    }
+  ],
+  "itemsTotal": 357000,
+  "shippingTotal": 55000,
+  "discountTotal": 25000,
+  "grandTotal": 387000,
+  "savings": [
+    {
+      "label": "Free shipping at Minh An Stationery",
+      "amount": 25000
+    }
+  ],
+  "minimumCost": 290000,
+  "costDrivers": [
+    "Water bottle",
+    "Lunch box"
+  ],
+  "overBy": 187000,
+  "fit": [
+    {
+      "id": "fit-1",
+      "label": "Drop Lunch box and switch Water bottle to Minh An Kids Water Bottle 500 ml: 216.000₫",
+      "removeItemKeys": [
+        "lunch-box"
+      ],
+      "swaps": [
+        {
+          "itemKey": "water-bottle",
+          "productId": "prod-minhan-bottle"
+        }
+      ],
+      "grandTotal": 216000,
+      "fits": false,
+      "dropsMustHave": false
+    },
+    {
+      "id": "fit-2",
+      "label": "Drop Lunch box and Water bottle: 127.000₫",
+      "removeItemKeys": [
+        "lunch-box",
+        "water-bottle"
+      ],
+      "swaps": [],
+      "grandTotal": 127000,
+      "fits": true,
+      "dropsMustHave": true
+    }
+  ]
+}

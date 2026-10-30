@@ -1,7 +1,13 @@
 node_modules/
 .next/
+next-env.d.ts
+*.tsbuildinfo
 .env
-.env.local
+.env.*
+!.env.example
 scripts/.cache/
 e2e/artifacts/
+.playwright-mcp/
+test-results/
+playwright-report/
 .vercel/

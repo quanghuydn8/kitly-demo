@@ -1,0 +1,7 @@
+node_modules
+.next
+kit
+e2e/artifacts
+scripts/.cache
+src/contract/fixtures/*.json
+package-lock.json

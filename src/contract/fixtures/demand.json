@@ -1,0 +1,662 @@
+[
+  {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "query": "Con tôi vào lớp 1, balo chống gù dưới 400k",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "seed",
+    "createdAt": "2026-09-02T08:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 380000
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000002",
+    "query": "Grade 1 kit with a raincoat that covers the backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-09-01T09:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 150000
+      },
+      {
+        "needLabel": "School backpack",
+        "category": "school-backpack",
+        "tags": [],
+        "matchedCount": 7,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000003",
+    "query": "Đồ đi học lớp 1 kèm đèn học chống ánh sáng xanh",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "seed",
+    "createdAt": "2026-08-31T10:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-blue-light desk lamp",
+        "category": "kids-desk-lamp",
+        "tags": [
+          "anti-blue-light"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 320000
+      },
+      {
+        "needLabel": "Notebooks",
+        "category": "notebooks",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Pencils",
+        "category": "pencils-pens",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000004",
+    "query": "I'm adopting a puppy",
+    "event": "other",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-30T11:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Dog food",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog bed",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog leash",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000005",
+    "query": "Back to school for my son, anti-hunchback backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-29T12:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 350000
+      },
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 140000
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000006",
+    "query": "Con tôi vào lớp 1, balo chống gù dưới 400k",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "seed",
+    "createdAt": "2026-08-28T13:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 380000
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000007",
+    "query": "Grade 1 kit with a raincoat that covers the backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-27T14:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 150000
+      },
+      {
+        "needLabel": "School backpack",
+        "category": "school-backpack",
+        "tags": [],
+        "matchedCount": 7,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000008",
+    "query": "Đồ đi học lớp 1 kèm đèn học chống ánh sáng xanh",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "seed",
+    "createdAt": "2026-09-02T15:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-blue-light desk lamp",
+        "category": "kids-desk-lamp",
+        "tags": [
+          "anti-blue-light"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 320000
+      },
+      {
+        "needLabel": "Notebooks",
+        "category": "notebooks",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Pencils",
+        "category": "pencils-pens",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000009",
+    "query": "I'm adopting a puppy",
+    "event": "other",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-09-01T16:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Dog food",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog bed",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog leash",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000010",
+    "query": "Back to school for my son, anti-hunchback backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-31T17:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 350000
+      },
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 140000
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000011",
+    "query": "Con tôi vào lớp 1, balo chống gù dưới 400k",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "seed",
+    "createdAt": "2026-08-30T18:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 380000
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000012",
+    "query": "Grade 1 kit with a raincoat that covers the backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-29T19:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 150000
+      },
+      {
+        "needLabel": "School backpack",
+        "category": "school-backpack",
+        "tags": [],
+        "matchedCount": 7,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000013",
+    "query": "Đồ đi học lớp 1 kèm đèn học chống ánh sáng xanh",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "seed",
+    "createdAt": "2026-08-21T08:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-blue-light desk lamp",
+        "category": "kids-desk-lamp",
+        "tags": [
+          "anti-blue-light"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 320000
+      },
+      {
+        "needLabel": "Notebooks",
+        "category": "notebooks",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Pencils",
+        "category": "pencils-pens",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000014",
+    "query": "I'm adopting a puppy",
+    "event": "other",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-20T09:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Dog food",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog bed",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog leash",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000015",
+    "query": "Back to school for my son, anti-hunchback backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-26T10:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 350000
+      },
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 140000
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000016",
+    "query": "Con tôi vào lớp 1, balo chống gù dưới 400k",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "seed",
+    "createdAt": "2026-08-25T11:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 380000
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000017",
+    "query": "Grade 1 kit with a raincoat that covers the backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "seed",
+    "createdAt": "2026-08-24T12:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 150000
+      },
+      {
+        "needLabel": "School backpack",
+        "category": "school-backpack",
+        "tags": [],
+        "matchedCount": 7,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Water bottle",
+        "category": "water-bottle",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000018",
+    "query": "Đồ đi học lớp 1 kèm đèn học chống ánh sáng xanh",
+    "event": "back_to_school",
+    "language": "vi",
+    "source": "live",
+    "createdAt": "2026-08-23T13:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-blue-light desk lamp",
+        "category": "kids-desk-lamp",
+        "tags": [
+          "anti-blue-light"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 320000
+      },
+      {
+        "needLabel": "Notebooks",
+        "category": "notebooks",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Pencils",
+        "category": "pencils-pens",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000019",
+    "query": "I'm adopting a puppy",
+    "event": "other",
+    "language": "en",
+    "source": "live",
+    "createdAt": "2026-08-22T14:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Dog food",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog bed",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      },
+      {
+        "needLabel": "Dog leash",
+        "category": null,
+        "tags": [],
+        "matchedCount": 0,
+        "budgetHint": null
+      }
+    ]
+  },
+  {
+    "id": "00000000-0000-4000-8000-000000000020",
+    "query": "Back to school for my son, anti-hunchback backpack",
+    "event": "back_to_school",
+    "language": "en",
+    "source": "live",
+    "createdAt": "2026-08-21T15:15:00.000Z",
+    "items": [
+      {
+        "needLabel": "Anti-hunchback backpack",
+        "category": "school-backpack",
+        "tags": [
+          "anti-hunchback"
+        ],
+        "matchedCount": 1,
+        "budgetHint": 350000
+      },
+      {
+        "needLabel": "Raincoat with backpack cover",
+        "category": "kids-raincoat",
+        "tags": [
+          "backpack-cover"
+        ],
+        "matchedCount": 0,
+        "budgetHint": 140000
+      },
+      {
+        "needLabel": "Lunch box",
+        "category": "lunch-box",
+        "tags": [],
+        "matchedCount": 2,
+        "budgetHint": null
+      }
+    ]
+  }
+]

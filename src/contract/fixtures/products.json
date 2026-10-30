@@ -1,0 +1,759 @@
+[
+  {
+    "id": "prod-minhan-backpack",
+    "shopId": "shop-minhan",
+    "title": "Minh An Kids Backpack New Model 2026",
+    "category": "school-backpack",
+    "description": "Padded ergonomic back panel with S-shaped straps that keep the spine straight. Weighs only 0.75 kg. Water-resistant fabric. Sized for children aged 6–8.",
+    "price": 349000,
+    "rating": 4.8,
+    "reviewCount": 412,
+    "soldCount": 1930,
+    "stock": 120,
+    "tags": [
+      "kids"
+    ],
+    "attributes": {
+      "material": "polyester"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-ergo-backpack",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Ergo Spine-Care Backpack",
+    "category": "school-backpack",
+    "description": "Orthopedic spine-care back panel certified anti-hunchback, with a chest strap that spreads the load. 0.7 kg, waterproof coating. For grades 1–5.",
+    "price": 890000,
+    "rating": 4.9,
+    "reviewCount": 1240,
+    "soldCount": 3100,
+    "stock": 60,
+    "tags": [
+      "anti-hunchback",
+      "kids",
+      "lightweight",
+      "waterproof",
+      "grade-1"
+    ],
+    "attributes": {
+      "weight": "0.7 kg",
+      "age": "6-10"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-lite-backpack",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Lite Backpack Grade 1–3",
+    "category": "school-backpack",
+    "description": "Light 0.6 kg frame with padded shoulder straps and a reflective strip. Two main compartments fit A4 notebooks. Sized for grades 1–3.",
+    "price": 520000,
+    "rating": 4.9,
+    "reviewCount": 860,
+    "soldCount": 2400,
+    "stock": 40,
+    "tags": [
+      "kids",
+      "lightweight",
+      "grade-1"
+    ],
+    "attributes": {
+      "weight": "0.6 kg",
+      "age": "6-9"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-homie-kids-backpack",
+    "shopId": "shop-homie",
+    "title": "Homie Kids Lightweight Backpack 15L",
+    "category": "school-backpack",
+    "description": "15 L backpack weighing 0.65 kg with breathable mesh straps. Side pocket for a water bottle. Machine washable.",
+    "price": 420000,
+    "rating": 4.6,
+    "reviewCount": 233,
+    "soldCount": 780,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "lightweight"
+    ],
+    "attributes": {
+      "weight": "0.65 kg",
+      "capacity": "15 L"
+    },
+    "shipDaysMin": 2,
+    "shipDaysMax": 3,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-bago-backpack-basic",
+    "shopId": "shop-bago",
+    "title": "Bago Basic School Backpack",
+    "category": "school-backpack",
+    "description": "Simple canvas backpack with one main compartment and a front zip pocket. 0.9 kg. Fits A4.",
+    "price": 150000,
+    "rating": 4.1,
+    "reviewCount": 96,
+    "soldCount": 410,
+    "stock": 100,
+    "tags": [],
+    "attributes": {
+      "material": "canvas"
+    },
+    "shipDaysMin": 6,
+    "shipDaysMax": 9,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-bago-backpack-color",
+    "shopId": "shop-bago",
+    "title": "Bago Color Block Kids Backpack",
+    "category": "school-backpack",
+    "description": "Colour-block polyester backpack, two compartments, padded straps. 0.85 kg.",
+    "price": 199000,
+    "rating": 4.2,
+    "reviewCount": 158,
+    "soldCount": 620,
+    "stock": 100,
+    "tags": [],
+    "attributes": {
+      "material": "polyester"
+    },
+    "shipDaysMin": 6,
+    "shipDaysMax": 9,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-bago-backpack-trend",
+    "shopId": "shop-bago",
+    "title": "Bago Trend Backpack 2026",
+    "category": "school-backpack",
+    "description": "Trendy backpack with laptop sleeve up to 14 inches and USB port. 1.0 kg.",
+    "price": 250000,
+    "rating": 4,
+    "reviewCount": 61,
+    "soldCount": 205,
+    "stock": 0,
+    "tags": [],
+    "attributes": {
+      "material": "nylon"
+    },
+    "shipDaysMin": 6,
+    "shipDaysMax": 9,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-notebooks",
+    "shopId": "shop-minhan",
+    "title": "Minh An Grade 1 Notebook Set (10 books, 4-line ruling)",
+    "category": "notebooks",
+    "description": "Ten 48-page notebooks with 4-line ruling for handwriting practice. 100 gsm paper, no ink bleed.",
+    "price": 45000,
+    "rating": 4.7,
+    "reviewCount": 1520,
+    "soldCount": 8200,
+    "stock": 100,
+    "tags": [
+      "grade-1",
+      "budget"
+    ],
+    "attributes": {
+      "pages": "48",
+      "pack": "10"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-notebooks",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Premium Notebook Pack (8 books)",
+    "category": "notebooks",
+    "description": "Eight 80-page notebooks with laminated covers. 120 gsm acid-free paper.",
+    "price": 79000,
+    "rating": 4.9,
+    "reviewCount": 640,
+    "soldCount": 2100,
+    "stock": 100,
+    "tags": [
+      "grade-1",
+      "premium"
+    ],
+    "attributes": {
+      "pages": "80",
+      "pack": "8"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-pencils",
+    "shopId": "shop-minhan",
+    "title": "Minh An 2B Pencil Set (12 pcs) with Sharpener",
+    "category": "pencils-pens",
+    "description": "Twelve 2B graphite pencils with a sharpener and two erasers. Triangular grip for small hands.",
+    "price": 32000,
+    "rating": 4.6,
+    "reviewCount": 980,
+    "soldCount": 5400,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "grade-1"
+    ],
+    "attributes": {
+      "pack": "12"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-pens",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Ergonomic Fountain Pen Set for Beginners",
+    "category": "pencils-pens",
+    "description": "Two beginner fountain pens with ergonomic grip and 6 ink cartridges. Smooth 0.5 mm nib.",
+    "price": 65000,
+    "rating": 4.8,
+    "reviewCount": 410,
+    "soldCount": 1500,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "ergonomic",
+      "grade-1"
+    ],
+    "attributes": {
+      "pack": "2 pens + 6 cartridges"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-pencil-case",
+    "shopId": "shop-minhan",
+    "title": "Minh An Double Zip Pencil Case",
+    "category": "pencil-case",
+    "description": "Two-compartment pencil case with 30 elastic slots. Wipe-clean fabric. 21 × 9 cm.",
+    "price": 59000,
+    "rating": 4.7,
+    "reviewCount": 530,
+    "soldCount": 2600,
+    "stock": 100,
+    "tags": [
+      "kids"
+    ],
+    "attributes": {
+      "size": "21 x 9 cm"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-pencil-case",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Hard Shell Pencil Box",
+    "category": "pencil-case",
+    "description": "Hard shell box with built-in sharpener and timetable. Survives drops from desk height.",
+    "price": 119000,
+    "rating": 4.9,
+    "reviewCount": 300,
+    "soldCount": 900,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "premium"
+    ],
+    "attributes": {
+      "size": "23 x 10 cm"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-crayons",
+    "shopId": "shop-minhan",
+    "title": "Minh An Wax Crayons 24 Colours",
+    "category": "crayons-paints",
+    "description": "24 non-toxic wax crayons, thick 11 mm sticks that do not snap easily.",
+    "price": 55000,
+    "rating": 4.6,
+    "reviewCount": 720,
+    "soldCount": 3300,
+    "stock": 100,
+    "tags": [
+      "kids"
+    ],
+    "attributes": {
+      "colours": "24"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-paints",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Watercolour Paint Set 36 Colours",
+    "category": "crayons-paints",
+    "description": "36 washable watercolour cakes with two brushes and a mixing palette. Non-toxic, EN71 tested.",
+    "price": 129000,
+    "rating": 4.9,
+    "reviewCount": 380,
+    "soldCount": 1200,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "premium"
+    ],
+    "attributes": {
+      "colours": "36"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-bottle",
+    "shopId": "shop-minhan",
+    "title": "Minh An Kids Water Bottle 500 ml",
+    "category": "water-bottle",
+    "description": "500 ml Tritan bottle with flip straw and lock. BPA-free and leak-proof in a school bag.",
+    "price": 89000,
+    "rating": 4.7,
+    "reviewCount": 860,
+    "soldCount": 4100,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "bpa-free",
+      "leak-proof"
+    ],
+    "attributes": {
+      "volume": "500 ml"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-bottle",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Insulated Steel Bottle 450 ml",
+    "category": "water-bottle",
+    "description": "Double-wall stainless steel keeps water cold 12 hours. BPA-free lid with silicone spout.",
+    "price": 189000,
+    "rating": 4.9,
+    "reviewCount": 1100,
+    "soldCount": 3800,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "bpa-free",
+      "insulated",
+      "leak-proof"
+    ],
+    "attributes": {
+      "volume": "450 ml"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-lunchbox",
+    "shopId": "shop-minhan",
+    "title": "Minh An 3-Compartment Lunch Box",
+    "category": "lunch-box",
+    "description": "Three sealed compartments with a spoon and fork. Microwave safe, BPA-free, leak-proof lid.",
+    "price": 99000,
+    "rating": 4.6,
+    "reviewCount": 640,
+    "soldCount": 2900,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "bpa-free",
+      "leak-proof"
+    ],
+    "attributes": {
+      "volume": "900 ml"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-lunchbox",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Thermal Lunch Box 2 Tiers",
+    "category": "lunch-box",
+    "description": "Two stainless steel tiers in an insulated case that keeps food warm 5 hours.",
+    "price": 219000,
+    "rating": 4.9,
+    "reviewCount": 520,
+    "soldCount": 1700,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "insulated",
+      "leak-proof"
+    ],
+    "attributes": {
+      "volume": "2 x 450 ml"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-shoes",
+    "shopId": "shop-minhan",
+    "title": "Minh An Canvas School Shoes",
+    "category": "school-shoes",
+    "description": "White canvas shoes with velcro straps and rubber sole. Sizes 28–35.",
+    "price": 229000,
+    "rating": 4.5,
+    "reviewCount": 310,
+    "soldCount": 1400,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "non-slip"
+    ],
+    "attributes": {
+      "sizes": "28-35"
+    },
+    "shipDaysMin": 2,
+    "shipDaysMax": 3,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-shoes",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Comfort School Sneakers",
+    "category": "school-shoes",
+    "description": "Breathable mesh sneakers with memory foam insole and non-slip sole. Sizes 27–36.",
+    "price": 359000,
+    "rating": 4.9,
+    "reviewCount": 760,
+    "soldCount": 2200,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "non-slip",
+      "lightweight"
+    ],
+    "attributes": {
+      "sizes": "27-36"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-uniform",
+    "shopId": "shop-minhan",
+    "title": "Minh An White Uniform Shirt (short sleeve)",
+    "category": "uniform-shirt",
+    "description": "Cotton-blend short-sleeve school shirt that resists wrinkles. Sizes 110–150 cm.",
+    "price": 120000,
+    "rating": 4.6,
+    "reviewCount": 450,
+    "soldCount": 3000,
+    "stock": 100,
+    "tags": [
+      "kids"
+    ],
+    "attributes": {
+      "material": "65% cotton",
+      "sizes": "110-150"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-uniform",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Organic Cotton Uniform Shirt",
+    "category": "uniform-shirt",
+    "description": "100% organic cotton short-sleeve shirt, soft collar, anti-stain finish. Sizes 110–150 cm.",
+    "price": 165000,
+    "rating": 4.9,
+    "reviewCount": 380,
+    "soldCount": 1300,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "organic-cotton",
+      "premium"
+    ],
+    "attributes": {
+      "material": "organic cotton",
+      "sizes": "110-150"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-raincoat",
+    "shopId": "shop-minhan",
+    "title": "Minh An Kids Raincoat with Hood",
+    "category": "kids-raincoat",
+    "description": "Lightweight PVC-free raincoat with hood and reflective trim. Sizes S–XL (4–12 years).",
+    "price": 99000,
+    "rating": 4.5,
+    "reviewCount": 270,
+    "soldCount": 1100,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "waterproof"
+    ],
+    "attributes": {
+      "sizes": "S-XL"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-kidzone-raincoat",
+    "shopId": "shop-kidzone",
+    "title": "KidZone Poncho Raincoat Kids",
+    "category": "kids-raincoat",
+    "description": "Breathable poncho raincoat with snap sleeves. Folds into its own pouch.",
+    "price": 149000,
+    "rating": 4.8,
+    "reviewCount": 190,
+    "soldCount": 640,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "waterproof",
+      "foldable"
+    ],
+    "attributes": {
+      "sizes": "S-L"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-minhan-book-covers",
+    "shopId": "shop-minhan",
+    "title": "Minh An Clear Book Covers (20 pcs)",
+    "category": "book-covers",
+    "description": "Twenty clear plastic book covers for standard textbooks, with name labels.",
+    "price": 25000,
+    "rating": 4.6,
+    "reviewCount": 890,
+    "soldCount": 6100,
+    "stock": 100,
+    "tags": [
+      "budget"
+    ],
+    "attributes": {
+      "pack": "20"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-homie-kids-lamp",
+    "shopId": "shop-homie",
+    "title": "Homie LED Study Lamp for Kids",
+    "category": "kids-desk-lamp",
+    "description": "Foldable LED desk lamp with 3 brightness levels and USB charging. 5 W.",
+    "price": 259000,
+    "rating": 4.5,
+    "reviewCount": 140,
+    "soldCount": 520,
+    "stock": 100,
+    "tags": [
+      "kids",
+      "foldable",
+      "energy-saving"
+    ],
+    "attributes": {
+      "power": "5 W"
+    },
+    "shipDaysMin": 2,
+    "shipDaysMax": 3,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-homie-rice-cooker",
+    "shopId": "shop-homie",
+    "title": "Homie Mini Rice Cooker 1.2 L",
+    "category": "rice-cooker",
+    "description": "1.2 L non-stick pot for 2–4 people, keep-warm mode, 500 W.",
+    "price": 690000,
+    "rating": 4.7,
+    "reviewCount": 980,
+    "soldCount": 4300,
+    "stock": 100,
+    "tags": [
+      "compact",
+      "energy-saving"
+    ],
+    "attributes": {
+      "capacity": "1.2 L",
+      "power": "500 W"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 3,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-homie-bedding",
+    "shopId": "shop-homie",
+    "title": "Homie Microfiber Bedding Set 1m6",
+    "category": "bedding-set",
+    "description": "Duvet cover, fitted sheet and two pillowcases for a 1.6 m bed. Soft brushed microfiber.",
+    "price": 450000,
+    "rating": 4.6,
+    "reviewCount": 420,
+    "soldCount": 1500,
+    "stock": 100,
+    "tags": [
+      "budget"
+    ],
+    "attributes": {
+      "size": "1.6 x 2 m"
+    },
+    "shipDaysMin": 2,
+    "shipDaysMax": 4,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-homie-fan",
+    "shopId": "shop-homie",
+    "title": "Homie Quiet Desk Fan 25 cm",
+    "category": "desk-fan",
+    "description": "25 cm desk fan with 3 speeds, 32 dB on low. Tilts 30°.",
+    "price": 350000,
+    "rating": 4.5,
+    "reviewCount": 310,
+    "soldCount": 990,
+    "stock": 100,
+    "tags": [
+      "quiet",
+      "compact"
+    ],
+    "attributes": {
+      "size": "25 cm"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 3,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-trailhead-tent",
+    "shopId": "shop-trailhead",
+    "title": "Trailhead Dome Tent 2-Person",
+    "category": "tent",
+    "description": "Freestanding 2-person dome tent, 2.1 kg, 3000 mm waterproof fly. Sets up in 5 minutes.",
+    "price": 1890000,
+    "rating": 4.8,
+    "reviewCount": 260,
+    "soldCount": 700,
+    "stock": 100,
+    "tags": [
+      "2-person",
+      "waterproof",
+      "lightweight"
+    ],
+    "attributes": {
+      "weight": "2.1 kg"
+    },
+    "shipDaysMin": 2,
+    "shipDaysMax": 4,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-trailhead-headlamp",
+    "shopId": "shop-trailhead",
+    "title": "Trailhead Rechargeable Headlamp 300 lm",
+    "category": "headlamp",
+    "description": "300 lumen USB-C rechargeable headlamp with red light mode. IPX4.",
+    "price": 159000,
+    "rating": 4.7,
+    "reviewCount": 540,
+    "soldCount": 2100,
+    "stock": 100,
+    "tags": [
+      "waterproof",
+      "lightweight"
+    ],
+    "attributes": {
+      "brightness": "300 lm"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 2,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-deskpro-chair",
+    "shopId": "shop-deskpro",
+    "title": "DeskPro Ergonomic Mesh Office Chair",
+    "category": "office-chair",
+    "description": "Mesh back with adjustable lumbar support, 3D armrests and 135° recline.",
+    "price": 2490000,
+    "rating": 4.7,
+    "reviewCount": 610,
+    "soldCount": 1800,
+    "stock": 100,
+    "tags": [
+      "ergonomic",
+      "adjustable"
+    ],
+    "attributes": {
+      "maxLoad": "120 kg"
+    },
+    "shipDaysMin": 2,
+    "shipDaysMax": 4,
+    "updatedForDemandAt": null
+  },
+  {
+    "id": "prod-deskpro-mouse",
+    "shopId": "shop-deskpro",
+    "title": "DeskPro Silent Wireless Mouse",
+    "category": "mouse",
+    "description": "2.4 GHz wireless mouse with silent clicks and 18-month battery life.",
+    "price": 290000,
+    "rating": 4.6,
+    "reviewCount": 1300,
+    "soldCount": 5200,
+    "stock": 100,
+    "tags": [
+      "wireless",
+      "quiet",
+      "ergonomic"
+    ],
+    "attributes": {
+      "dpi": "1600"
+    },
+    "shipDaysMin": 1,
+    "shipDaysMax": 3,
+    "updatedForDemandAt": null
+  }
+]

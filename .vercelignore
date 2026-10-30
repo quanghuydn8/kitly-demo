@@ -1,0 +1,5 @@
+.env
+.env.*
+!.env.example
+e2e/artifacts/
+scripts/.cache/
