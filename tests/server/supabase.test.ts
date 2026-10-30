@@ -11,6 +11,8 @@ import { LLM_CATEGORIES } from "@/server/seed/world";
 import { countMatches } from "@/server/seed/matched";
 import { commerceAdapterContract } from "./contracts/commerce-adapter";
 import { kitStoreContract } from "./contracts/kit-store";
+import { adviceStoreContract } from "./contracts/advice-store";
+import { SupabaseAdviceStore } from "@/server/advicestore/supabase";
 import { expectPlantedFacts } from "./seed-planted-facts";
 
 const skip = !process.env.SUPABASE_URL;
@@ -34,6 +36,18 @@ kitStoreContract(
     make: () => new SupabaseKitStore(),
     cleanup: async (prefix) => {
       const { error } = await supabaseClient().from("kit_threads").delete().like("owner", `${prefix}%`);
+      if (error) throw new Error(error.message);
+    },
+  },
+  { skip },
+);
+
+adviceStoreContract(
+  "SupabaseAdviceStore",
+  {
+    make: () => new SupabaseAdviceStore(),
+    cleanup: async (prefix) => {
+      const { error } = await supabaseClient().from("insight_advice").delete().like("gap_key", `${prefix}%`);
       if (error) throw new Error(error.message);
     },
   },
