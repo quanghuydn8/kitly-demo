@@ -34,9 +34,26 @@ describe("depthProblems (DATA.md §3 depth rule + §4 express rule)", () => {
       p("c", 300000),
       p("d", 380000),
       p("e", 520000, { shopId: "s-mall" }),
-      p("f", 150000, { shipDaysMin: 5, shipDaysMax: 8 }),
+      p("f", 650000, { shipDaysMin: 5, shipDaysMax: 8 }),
     ];
     expect(depthProblems(ok, shops)).toEqual([]);
+  });
+
+  // rehearsal 2 (31/10): "Giao hoả tốc" (deadline today + 2) left one express product per category — the best-rated,
+  // i.e. the most expensive — and the hero kit jumped to 3.555.000₫, 2M over budget. Express must include a cheap pick.
+  it("express: the cheapest in-stock product must ship in ≤ 2 days, not only some product", () => {
+    const onlyPremiumExpress = [
+      p("a", 200000),
+      p("b", 250000),
+      p("c", 300000),
+      p("d", 380000),
+      p("e", 520000, { shopId: "s-mall", shipDaysMax: 2, rating: 4.9 }),
+    ];
+    expect(depthProblems(onlyPremiumExpress, shops)).toEqual(["express"]);
+    const fixed = enforceDepth(onlyPremiumExpress, { category: "desk-fan", shops });
+    expect(depthProblems(fixed, shops)).toEqual([]);
+    expect(fixed.find((x) => x.id === "a")!).toMatchObject({ shipDaysMin: 1, shipDaysMax: 2 });
+    expect(fixed.find((x) => x.id === "e")!.shipDaysMax).toBe(2);
   });
 
   it("names every failed check", () => {

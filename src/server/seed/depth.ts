@@ -2,8 +2,9 @@
 //   count   ≥ 5 in-stock products with shipDaysMax ≤ 3 (they arrive before Sep 5 from DEMO_TODAY)
 //   spread  among those, the most expensive costs ≥ 2.5× the cheapest
 //   quality ≥ 1 of those in the top price third has rating ≥ 4.8 or is sold by a mall shop
-//   express ≥ 1 in-stock product with shipDaysMax ≤ 2
-// Fixes, in order: express (best-rated in-stock → 1–2 days), shorten slow in-stock products, plant code-written
+//   express ≥ 1 in-stock product with shipDaysMax ≤ 2, AND the cheapest in-stock product is one of them (rehearsal 2:
+//           best-rated-only express made the "hoả tốc" hero kit 2M over budget)
+// Fixes, in order: express (best-rated + cheapest in-stock → 1–2 days), shorten slow in-stock products, plant code-written
 // fill products. Planted products never carry gap tags.
 import type { Product, Shop } from "@/contract";
 import { categoryById } from "@/contract";
@@ -16,6 +17,8 @@ const MIN_FAST = 5;
 const SPREAD = 2.5;
 const GAP_TAGS = new Set(["anti-hunchback", "backpack-cover", "anti-blue-light"]);
 
+const cheapestInStock = (ps: Product[]) =>
+  ps.filter((p) => p.stock > 0).sort((a, b) => a.price - b.price || a.id.localeCompare(b.id))[0] as Product | undefined;
 const fastSet = (ps: Product[]) => ps.filter((p) => p.stock > 0 && p.shipDaysMax <= FAST_DAYS);
 const round1k = (n: number) => Math.round(n / 1000) * 1000;
 
@@ -34,7 +37,9 @@ export function depthProblems(products: Product[], shops: Shop[]): DepthProblem[
   const prices = fast.map((p) => p.price);
   if (!fast.length || Math.max(...prices) < SPREAD * Math.min(...prices)) out.push("spread");
   if (!fast.length || !topThirdHasQuality(fast, byId)) out.push("quality");
-  if (!products.some((p) => p.stock > 0 && p.shipDaysMax <= EXPRESS_DAYS)) out.push("express");
+  const cheapest = cheapestInStock(products);
+  if (!products.some((p) => p.stock > 0 && p.shipDaysMax <= EXPRESS_DAYS) || (cheapest && cheapest.shipDaysMax > EXPRESS_DAYS))
+    out.push("express");
   return out;
 }
 
@@ -47,12 +52,17 @@ export function enforceDepth(products: Product[], ctx: { category: string; shops
   const { category, shops } = ctx;
   if (!depthProblems(out, shops).length) return out;
 
-  // express: best-rated in-stock product ships in 1–2 days
+  // express: best-rated in-stock product ships in 1–2 days, and so does the cheapest (an express kit can still fit a budget)
   const inStock = out.filter((p) => p.stock > 0);
   if (!inStock.some((p) => p.shipDaysMax <= EXPRESS_DAYS) && inStock.length) {
     const best = [...inStock].sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount)[0];
     best.shipDaysMin = 1;
     best.shipDaysMax = EXPRESS_DAYS;
+  }
+  const cheap = cheapestInStock(out);
+  if (cheap && cheap.shipDaysMax > EXPRESS_DAYS) {
+    cheap.shipDaysMin = 1;
+    cheap.shipDaysMax = EXPRESS_DAYS;
   }
 
   // count: shorten the best-rated slow in-stock products first
