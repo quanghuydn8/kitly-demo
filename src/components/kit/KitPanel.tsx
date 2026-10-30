@@ -3,12 +3,15 @@
 // rows with alternatives + Swap, "No exact match" rows with the closest product, "Not in store yet" block,
 // "Skipped for budget", totals + savings, over-budget banner, Add kit to cart. All money comes from the server
 // (options / re-priced overrides); nothing is computed here. Presentational: KitScreen owns requests.
-import { useState } from "react";
-import { AlertTriangle, ArrowLeftRight, ChevronDown, PackageX, RotateCcw, ShoppingCart } from "lucide-react";
-import { EVENTS, type BasketLine, type BasketOption, type KitPlan, type KitVersion, type Profile } from "@/contract";
+// T15 edits (D28/D29/D32/D33): ✕ per basket row (remove_item), Add anyway on the closest product, Fit to budget
+// buttons + Undo under the over-budget banner, inline budget/deadline edit in the header. Never blocked by budget.
+import { useState, type KeyboardEvent } from "react";
+import { AlertTriangle, ArrowLeftRight, ChevronDown, PackageX, Pencil, Plus, RotateCcw, ShoppingCart, Undo2, X } from "lucide-react";
+import { EVENTS, type BasketLine, type BasketOption, type FitSuggestion, type KitPlan, type KitVersion, type Profile } from "@/contract";
 import { basketTabs, defaultTabId } from "@/lib/client/kit-compare";
+import { closestMatchLabel, parseBudgetInput } from "@/lib/client/kit-edits";
 import { missingLabel, noMatchSentence, overMaxLabel } from "@/lib/client/kit-text";
-import { formatShortDate, formatVnd } from "@/lib/client/format";
+import { formatCount, formatShortDate, formatVnd } from "@/lib/client/format";
 import { MiniProduct } from "./MiniProduct";
 
 export interface KitPanelProps {
@@ -25,6 +28,18 @@ export interface KitPanelProps {
   building?: boolean;
   busy?: boolean;
   error?: string | null;
+  /** ✕ "I already have this" → adjust remove_item. */
+  onRemoveItem?(itemKey: string): void;
+  /** Add anyway: pick the item's closest product → /api/kit/price. */
+  onAddAnyway?(version: number, profile: Profile, itemKey: string, productId: string): void;
+  /** ✕ on an Add-anyway line: drop the pick again. */
+  onTakeOut?(version: number, profile: Profile, itemKey: string): void;
+  onFit?(version: number, profile: Profile, fit: FitSuggestion): void;
+  onUndoFit?(): void;
+  /** `${version}:${profile}` of the basket whose last Fit to budget can be undone. */
+  fitUndoKey?: string | null;
+  onSetBudget?(budget: number | null): void;
+  onSetDeadline?(deadline: string | null): void;
 }
 
 export function KitPanel(props: KitPanelProps) {
@@ -42,7 +57,15 @@ export function KitPanel(props: KitPanelProps) {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      <KitHeader version={v} total={latest.version} onViewVersion={props.onViewVersion} />
+      <KitHeader
+        version={v}
+        total={latest.version}
+        onViewVersion={props.onViewVersion}
+        editable={!readOnly}
+        busy={props.busy}
+        onSetBudget={props.onSetBudget}
+        onSetDeadline={props.onSetDeadline}
+      />
       <div className="space-y-4 p-3 sm:p-4">
         {readOnly && (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -79,25 +102,58 @@ function KitHeader({
   version: v,
   total,
   onViewVersion,
+  editable,
+  busy,
+  onSetBudget,
+  onSetDeadline,
 }: {
   version: KitVersion;
   total: number;
   onViewVersion(v: number | null): void;
+  editable: boolean;
+  busy?: boolean;
+  onSetBudget?(budget: number | null): void;
+  onSetDeadline?(deadline: string | null): void;
 }) {
+  const [editing, setEditing] = useState<"budget" | "deadline" | null>(null);
   const ev = v.plan.event === "other" ? null : EVENTS[v.plan.event];
+  const budgetText =
+    v.status === "awaiting_budget" ? "Budget not set yet" : v.plan.budget === null ? "No budget limit" : `Budget ${formatVnd(v.plan.budget)}`;
   return (
     <header className="sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b bg-white/95 px-3 py-2.5 text-sm backdrop-blur sm:px-4">
       <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ev?.color ?? "bg-gray-100 text-gray-600"}`}>
         {ev?.label ?? "Other"}
       </span>
-      <span className="font-medium">
-        {v.status === "awaiting_budget"
-          ? "Budget not set yet"
-          : v.plan.budget === null
-            ? "No budget limit"
-            : `Budget ${formatVnd(v.plan.budget)}`}
-      </span>
-      {v.plan.deadline && <span className="text-gray-600">By {formatShortDate(v.plan.deadline)}</span>}
+      {editing === "budget" && onSetBudget ? (
+        <BudgetInput
+          initial={v.plan.budget === null ? "" : formatCount(v.plan.budget)}
+          onDone={(b) => {
+            setEditing(null);
+            if (b !== undefined) onSetBudget(b);
+          }}
+        />
+      ) : (
+        <span className="flex items-center gap-1 font-medium">
+          {budgetText}
+          {editable && onSetBudget && <PencilButton label="Edit budget" busy={busy} onClick={() => setEditing("budget")} />}
+        </span>
+      )}
+      {editing === "deadline" && onSetDeadline ? (
+        <DeadlineInput
+          initial={v.plan.deadline ?? ""}
+          onDone={(d) => {
+            setEditing(null);
+            if (d !== undefined) onSetDeadline(d);
+          }}
+        />
+      ) : (
+        (v.plan.deadline || (editable && onSetDeadline)) && (
+          <span className="flex items-center gap-1 text-gray-600">
+            {v.plan.deadline ? `By ${formatShortDate(v.plan.deadline)}` : "No deadline"}
+            {editable && onSetDeadline && <PencilButton label="Edit deadline" busy={busy} onClick={() => setEditing("deadline")} />}
+          </span>
+        )
+      )}
       <label className="ml-auto flex items-center gap-1 text-xs text-gray-500">
         <span className="sr-only">Version</span>
         <select
@@ -120,7 +176,79 @@ function KitHeader({
   );
 }
 
-function VersionBody({ version: v, readOnly, overrides, onSwap, onAddToCart, busy }: KitPanelProps & { version: KitVersion; readOnly: boolean }) {
+function PencilButton({ label, busy, onClick }: { label: string; busy?: boolean; onClick(): void }) {
+  return (
+    <button type="button" aria-label={label} title={label} disabled={busy} onClick={onClick} className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40">
+      <Pencil aria-hidden className="h-3 w-3" />
+    </button>
+  );
+}
+
+/** Enter commits, Escape cancels; `onDone(undefined)` = nothing to send. */
+function BudgetInput({ initial, onDone }: { initial: string; onDone(b: number | null | undefined): void }) {
+  const [text, setText] = useState(initial);
+  const [invalid, setInvalid] = useState(false);
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") onDone(undefined);
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const b = parseBudgetInput(text);
+    if (b === undefined) setInvalid(true);
+    else onDone(b);
+  };
+  return (
+    <span className="flex flex-col">
+      <input
+        aria-label="Budget"
+        autoFocus
+        value={text}
+        onChange={(e) => (setText(e.target.value), setInvalid(false))}
+        onKeyDown={onKey}
+        onBlur={() => onDone(undefined)}
+        placeholder="e.g. 1.5M · empty = no limit"
+        className="w-40 rounded-md border px-2 py-0.5 text-sm focus:border-[var(--kitly-accent)] focus:outline-none"
+      />
+      {invalid && <span className="text-xs text-red-600">Type an amount, e.g. 1.500.000 or 1.5M</span>}
+    </span>
+  );
+}
+
+function DeadlineInput({ initial, onDone }: { initial: string; onDone(d: string | null | undefined): void }) {
+  const [value, setValue] = useState(initial);
+  const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") onDone(undefined);
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    onDone(value || null);
+  };
+  return (
+    <input
+      type="date"
+      aria-label="Deadline"
+      autoFocus
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onKeyDown={onKey}
+      onBlur={() => onDone(undefined)}
+      className="rounded-md border px-2 py-0.5 text-sm focus:border-[var(--kitly-accent)] focus:outline-none"
+    />
+  );
+}
+
+function VersionBody({
+  version: v,
+  readOnly,
+  overrides,
+  onSwap,
+  onAddToCart,
+  busy,
+  onRemoveItem,
+  onAddAnyway,
+  onTakeOut,
+  onFit,
+  onUndoFit,
+  fitUndoKey,
+}: KitPanelProps & { version: KitVersion; readOnly: boolean }) {
   const tabs = basketTabs(v.options);
   const [tabId, setTabId] = useState(() => {
     const fromSelection = v.selection && tabs.find((t) => t.profiles.includes(v.selection!.profile));
@@ -130,7 +258,10 @@ function VersionBody({ version: v, readOnly, overrides, onSwap, onAddToCart, bus
   // No tabs ⇒ every option is empty: one honest-gap view of the Balanced (or first) option.
   const base = tab?.option ?? v.options.find((o) => o.profile === "balanced") ?? v.options[0];
   const profile = tab?.profile ?? base.profile;
-  const option = overrides[`${v.version}:${profile}`] ?? base;
+  const key = `${v.version}:${profile}`;
+  const option = overrides[key] ?? base;
+  const needLabel = (itemKey: string) => v.plan.items.find((i) => i.key === itemKey)?.needLabel ?? itemKey;
+  const over = option.status === "over_budget";
   const exact = option.noMatch.filter((n) => n.closest);
   const notInStore = option.noMatch.filter((n) => !n.closest);
 
@@ -157,16 +288,45 @@ function VersionBody({ version: v, readOnly, overrides, onSwap, onAddToCart, bus
         </div>
       )}
 
-      {option.status === "over_budget" && (
-        <div role="alert" className="flex gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            Over budget by {formatVnd(option.overBy ?? 0)}.
-            {option.minimumCost !== undefined && <> The cheapest version of this kit costs {formatVnd(option.minimumCost)}</>}
-            {option.costDrivers && option.costDrivers.length > 0 && <>, driven by {option.costDrivers.join(", ")}</>}
-            {option.minimumCost !== undefined && "."}
+      {over && (
+        <div role="alert" className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <p className="flex gap-2">
+            <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Over budget by {formatVnd(option.overBy ?? 0)}.
+              {option.minimumCost !== undefined && <> The cheapest version of this kit costs {formatVnd(option.minimumCost)}</>}
+              {option.costDrivers && option.costDrivers.length > 0 && <>, driven by {option.costDrivers.join(", ")}</>}
+              {option.minimumCost !== undefined && "."}
+            </span>
           </p>
+          {!readOnly && option.fit && option.fit.length > 0 && (
+            <div role="group" aria-label="Fit to budget" className="flex flex-col gap-1.5">
+              {option.fit.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onFit?.(v.version, profile, f)}
+                  className="flex flex-wrap items-center gap-1.5 rounded-md border border-red-300 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-gray-800 hover:border-red-500 disabled:opacity-50"
+                >
+                  <span className="min-w-0 flex-1">{f.label}</span>
+                  {f.dropsMustHave && <span className="rounded bg-red-100 px-1.5 py-0.5 text-[11px] text-red-700">removes a must-have</span>}
+                  {!f.fits && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800">still over</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+      )}
+
+      {!readOnly && fitUndoKey === key && (
+        <p className="flex items-center gap-2 text-xs text-gray-600">
+          <span>Basket edited to fit your budget.</span>
+          <button type="button" disabled={busy} onClick={() => onUndoFit?.()} className="flex items-center gap-1 font-medium text-[var(--kitly-accent)] disabled:opacity-50">
+            <Undo2 aria-hidden className="h-3 w-3" />
+            Undo
+          </button>
+        </p>
       )}
 
       {option.lines.length > 0 && (
@@ -175,9 +335,13 @@ function VersionBody({ version: v, readOnly, overrides, onSwap, onAddToCart, bus
             <BasketRow
               key={l.itemKey}
               line={l}
+              needLabel={needLabel(l.itemKey)}
+              closestLabel={closestMatchLabel(base, l)}
               readOnly={readOnly}
               busy={busy}
               onSwap={(productId) => onSwap(v.version, profile, l.itemKey, productId)}
+              onRemove={() => onRemoveItem?.(l.itemKey)}
+              onTakeOut={() => onTakeOut?.(v.version, profile, l.itemKey)}
             />
           ))}
         </ul>
@@ -186,7 +350,14 @@ function VersionBody({ version: v, readOnly, overrides, onSwap, onAddToCart, bus
       {exact.length > 0 && (
         <ul aria-label="No exact match" className="space-y-2">
           {exact.map((n) => (
-            <NoMatchRow key={n.itemKey} row={n} plan={v.plan} />
+            <NoMatchRow
+              key={n.itemKey}
+              row={n}
+              plan={v.plan}
+              readOnly={readOnly}
+              busy={busy}
+              onAddAnyway={() => onAddAnyway?.(v.version, profile, n.itemKey, n.closest!.candidate.product.id)}
+            />
           ))}
         </ul>
       )}
@@ -225,17 +396,37 @@ function VersionBody({ version: v, readOnly, overrides, onSwap, onAddToCart, bus
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--kitly-accent)] px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-40"
       >
         <ShoppingCart aria-hidden className="h-4 w-4" />
-        Add kit to cart
+        {over ? `Add kit to cart (over budget by ${formatVnd(option.overBy ?? 0)})` : "Add kit to cart"}
       </button>
     </>
   );
 }
 
-function BasketRow({ line, readOnly, busy, onSwap }: { line: BasketLine; readOnly: boolean; busy?: boolean; onSwap(productId: string): void }) {
+function BasketRow({
+  line,
+  needLabel,
+  closestLabel,
+  readOnly,
+  busy,
+  onSwap,
+  onRemove,
+  onTakeOut,
+}: {
+  line: BasketLine;
+  needLabel: string;
+  /** Set when this line is an Add-anyway closest product. */
+  closestLabel: string | null;
+  readOnly: boolean;
+  busy?: boolean;
+  onSwap(productId: string): void;
+  onRemove(): void;
+  onTakeOut(): void;
+}) {
   const [open, setOpen] = useState(false);
   const n = line.alternatives.length;
   return (
     <li className="space-y-1.5 px-3 py-2.5">
+      {closestLabel && <p className="text-[11px] font-medium uppercase tracking-wide text-amber-700">{closestLabel}</p>}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <MiniProduct product={line.product} shop={line.shop} />
@@ -244,6 +435,18 @@ function BasketRow({ line, readOnly, busy, onSwap }: { line: BasketLine; readOnl
           <div className="font-semibold">{formatVnd(line.lineTotal)}</div>
           {line.quantity > 1 && <div className="text-xs text-gray-500">× {line.quantity}</div>}
         </div>
+        {!readOnly && (
+          <button
+            type="button"
+            disabled={busy}
+            aria-label={closestLabel ? `Take out ${needLabel}` : `Remove ${needLabel} (I already have this)`}
+            title={closestLabel ? "Take it out again" : "I already have this"}
+            onClick={closestLabel ? onTakeOut : onRemove}
+            className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40"
+          >
+            <X aria-hidden className="h-4 w-4" />
+          </button>
+        )}
       </div>
       <p className="text-xs text-gray-500">{line.reason}</p>
       {n > 0 && !readOnly && (
@@ -283,7 +486,19 @@ function BasketRow({ line, readOnly, busy, onSwap }: { line: BasketLine; readOnl
   );
 }
 
-function NoMatchRow({ row, plan }: { row: BasketOption["noMatch"][number]; plan: KitPlan }) {
+function NoMatchRow({
+  row,
+  plan,
+  readOnly,
+  busy,
+  onAddAnyway,
+}: {
+  row: BasketOption["noMatch"][number];
+  plan: KitPlan;
+  readOnly: boolean;
+  busy?: boolean;
+  onAddAnyway(): void;
+}) {
   const c = row.closest!;
   return (
     <li className="space-y-2 rounded-xl border border-dashed border-amber-300 bg-amber-50/50 px-3 py-2.5">
@@ -295,6 +510,17 @@ function NoMatchRow({ row, plan }: { row: BasketOption["noMatch"][number]; plan:
           {c.missingTags.length > 0 && <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">{missingLabel(c.missingTags)}</span>}
           {c.overMaxPriceBy !== null && c.overMaxPriceBy > 0 && (
             <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-700">{overMaxLabel(c.overMaxPriceBy)}</span>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onAddAnyway}
+              className="ml-auto flex items-center gap-1 rounded-md border border-[var(--kitly-accent)] px-2 py-0.5 font-medium text-[var(--kitly-accent)] hover:bg-orange-50 disabled:opacity-50"
+            >
+              <Plus aria-hidden className="h-3 w-3" />
+              Add anyway
+            </button>
           )}
         </div>
       </div>

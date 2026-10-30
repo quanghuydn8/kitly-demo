@@ -3,14 +3,27 @@
 // and refines over SSE, answers clarify with adjust set_budget, restores versions, re-prices swaps. On a new kit the
 // URL becomes /kit/t/<threadId> (history.replaceState: no remount, the stream keeps going) when `plan` arrives.
 // Mobile (< md): sidebar in a drawer, Chat / Kit tabs.
+// T15 edits: ✕ / Undo / inline budget+deadline → POST /api/kit/adjust (new version); Add anyway / take out / Fit to
+// budget / its Undo → POST /api/kit/price (selection saved on the latest version, so a reload keeps it).
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
-import type { BasketOption, KitSelection, KitStreamEvent, KitThreadSummary, KitVersion, Profile, ThreadResponse } from "@/contract";
+import type {
+  BasketOption,
+  FitSuggestion,
+  KitChange,
+  KitSelection,
+  KitStreamEvent,
+  KitThreadSummary,
+  KitVersion,
+  Profile,
+  ThreadResponse,
+} from "@/contract";
 import { kitApi } from "@/lib/client/kit-api";
 import { applyEvent, runAsVersion, runSummary, startRun, type RunRequest, type RunState } from "@/lib/client/kit-run";
 import { useCart } from "@/lib/client/cart-store";
+import { withFit, withoutPick, withPick } from "@/lib/client/kit-edits";
 import { ChatColumn } from "./ChatColumn";
 import { KitPanel } from "./KitPanel";
 import { HistorySidebar } from "./HistorySidebar";
@@ -39,6 +52,8 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
   const [viewVersion, setViewVersion] = useState<number | null>(null);
   const [overrides, setOverrides] = useState<Record<string, BasketOption>>({});
   const [selection, setSelection] = useState<KitSelection | null>(null);
+  /** The selection before the last Fit to budget click, for its Undo; key = `${version}:${profile}`. */
+  const [fitUndo, setFitUndo] = useState<{ key: string; selection: KitSelection } | null>(null);
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"chat" | "kit">("chat");
@@ -165,6 +180,7 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
     setRun(null);
     setViewVersion(null);
     setSelection(null);
+    setFitUndo(null);
   };
 
   const edit = async (fn: () => Promise<void>) => {
@@ -195,25 +211,41 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
     });
   };
 
-  const onRestore = (version: number) => {
+  /** adjust → new version (chat gets the ⚙ system line). */
+  const adjust = (change: KitChange) => {
     const id = activeThreadId;
     if (!id) return;
     void edit(async () => {
-      appendVersion(await api.adjust(id, { type: "restore_version", version }));
+      appendVersion(await api.adjust(id, change));
       refreshThreads();
     });
   };
 
-  const onSwap = (version: number, profile: Profile, itemKey: string, productId: string) => {
+  const onRestore = (version: number) => adjust({ type: "restore_version", version });
+
+  /** Re-price `next` on the server; the panel shows the returned option. `undo` = keep the old selection for Fit's Undo. */
+  const price = (version: number, next: KitSelection, undo?: KitSelection) => {
     const id = activeThreadId;
     if (!id) return;
-    const base: KitSelection = selection?.profile === profile ? selection : { profile, picks: {}, dropped: [] };
-    const next: KitSelection = { ...base, picks: { ...base.picks, [itemKey]: productId } };
     void edit(async () => {
       const option = await api.price(id, next);
-      setOverrides((o) => ({ ...o, [`${version}:${profile}`]: option }));
+      setOverrides((o) => ({ ...o, [`${version}:${next.profile}`]: option }));
       setSelection(next);
+      setFitUndo(undo ? { key: `${version}:${next.profile}`, selection: undo } : null);
     });
+  };
+
+  const onSwap = (version: number, profile: Profile, itemKey: string, productId: string) =>
+    price(version, withPick(selection, profile, itemKey, productId));
+  const onAddAnyway = onSwap;
+  const onTakeOut = (version: number, profile: Profile, itemKey: string) => price(version, withoutPick(selection, profile, itemKey));
+  const onFit = (version: number, profile: Profile, fit: FitSuggestion) => {
+    const before: KitSelection = selection?.profile === profile ? selection : { profile, picks: {}, dropped: [] };
+    price(version, withFit(selection, profile, fit), before);
+  };
+  const onUndoFit = () => {
+    if (!fitUndo) return;
+    price(Number(fitUndo.key.split(":")[0]), fitUndo.selection);
   };
 
   const onAddToCart = (option: BasketOption) => {
@@ -301,6 +333,7 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
             onSend={onSend}
             onChooseBudget={onChooseBudget}
             onRetry={onRetry}
+            onRestoreItem={(itemKey) => adjust({ type: "restore_item", itemKey })}
           />
         )}
       </section>
@@ -317,6 +350,14 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
           building={streaming && !provisional}
           busy={busy}
           error={editError}
+          onRemoveItem={(itemKey) => adjust({ type: "remove_item", itemKey })}
+          onAddAnyway={onAddAnyway}
+          onTakeOut={onTakeOut}
+          onFit={onFit}
+          onUndoFit={onUndoFit}
+          fitUndoKey={fitUndo?.key ?? null}
+          onSetBudget={(budget) => adjust({ type: "set_budget", budget })}
+          onSetDeadline={(deadline) => adjust({ type: "set_deadline", deadline })}
         />
       </section>
     </div>

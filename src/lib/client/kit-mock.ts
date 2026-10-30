@@ -105,7 +105,30 @@ export const mockApi: KitApi = {
     const hero = KitStreamSchema.parse(kitSample);
     let base: KitVersion = latest;
     let userText = "Edited the kit";
-    if (change.type === "restore_version") {
+    let diff: KitVersion["diff"] = null;
+    const label = (key: string) =>
+      t.versions.flatMap((v) => v.plan.items).find((i) => i.key === key)?.needLabel ?? key;
+    if (change.type === "remove_item") {
+      // Mock only: drop the item everywhere, keep the fixture totals.
+      const k = change.itemKey;
+      base = {
+        ...latest,
+        plan: { ...latest.plan, items: latest.plan.items.filter((i) => i.key !== k) },
+        excludedKeys: [...latest.excludedKeys, k],
+        options: latest.options.map((o) => ({ ...o, lines: o.lines.filter((l) => l.itemKey !== k), noMatch: o.noMatch.filter((n) => n.itemKey !== k) })),
+      };
+      userText = `Removed: ${label(k)}`;
+      diff = { added: [], removed: [k], changed: [] };
+    } else if (change.type === "restore_item") {
+      const k = change.itemKey;
+      const before = [...t.versions].reverse().find((v) => v.plan.items.some((i) => i.key === k)) ?? latest;
+      base = { ...before, excludedKeys: latest.excludedKeys.filter((x) => x !== k) };
+      userText = `Restored: ${label(k)}`;
+      diff = { added: [k], removed: [], changed: [] };
+    } else if (change.type === "set_deadline") {
+      base = { ...latest, plan: { ...latest.plan, deadline: change.deadline } };
+      userText = change.deadline === null ? "No deadline" : `Deadline: ${change.deadline}`;
+    } else if (change.type === "restore_version") {
       base = t.versions.find((v) => v.version === change.version) ?? latest;
       userText = `Restored version ${change.version}`;
     } else if (change.type === "set_budget") {
@@ -120,7 +143,8 @@ export const mockApi: KitApi = {
       createdAt: nowIso(),
       kind: change.type === "restore_version" ? "restore" : "adjust",
       userText,
-      diff: null,
+      diff,
+      selection: null,
       followUp: null,
     };
     save(upsertVersion(threads, v, t.thread.title));
@@ -131,12 +155,28 @@ export const mockApi: KitApi = {
     const latest = t?.versions[t.versions.length - 1];
     const option = latest?.options.find((o) => o.profile === selection.profile);
     if (!option) throw new Error("Nothing to price");
-    // Mock only: move the picked alternative into the line, keep the fixture totals.
-    const lines = option.lines.map((l) => {
-      const alt = l.alternatives.find((a) => a.product.id === selection.picks[l.itemKey]);
-      return alt ? { ...l, product: alt.product, shop: alt.shop, reason: "Your pick" } : l;
-    });
-    return { ...option, lines };
+    // Mock only: move the picked alternative into the line, Add anyway turns the closest into a line, dropped items
+    // go to skipped; the fixture totals are kept.
+    const lines = option.lines
+      .filter((l) => !selection.dropped.includes(l.itemKey))
+      .map((l) => {
+        const alt = l.alternatives.find((a) => a.product.id === selection.picks[l.itemKey]);
+        return alt ? { ...l, product: alt.product, shop: alt.shop, reason: "Your pick" } : l;
+      });
+    const anyway = option.noMatch.filter((n) => n.closest && n.closest.candidate.product.id === selection.picks[n.itemKey]);
+    for (const n of anyway) {
+      const c = n.closest!.candidate;
+      lines.unshift({ itemKey: n.itemKey, product: c.product, shop: c.shop, quantity: 1, lineTotal: c.product.price, reason: "Added anyway", alternatives: [] });
+    }
+    const skipped = [
+      ...option.skipped,
+      ...option.lines.filter((l) => selection.dropped.includes(l.itemKey)).map((l) => ({ itemKey: l.itemKey, needLabel: l.product.title, reason: "budget" as const })),
+    ];
+    if (latest && t) {
+      latest.selection = selection;
+      save(load().map((x) => (x.thread.id === threadId ? t : x)));
+    }
+    return { ...option, lines, skipped, noMatch: option.noMatch.filter((n) => !anyway.includes(n)) };
   },
   async runKit(query, onEvent, signal) {
     const id = `mock-${Date.now().toString(36)}`;

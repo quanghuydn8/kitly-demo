@@ -2,10 +2,13 @@
 // Chat column (T11, D30): one user bubble + one assistant message per kit version, a system line for adjust/restore
 // versions, the live run (timeline → collapsed summary, explanation, assumption chips, clarify choices, error +
 // Retry) and the composer. Presentational: KitScreen owns the data and the requests.
+// T15: a "Removed: X" system line carries Undo (restore_item); the latest version's assumption chips are editable
+// and send `"<old>" is wrong: <new>` through onSend (the composer path → LLM refine).
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { AlertTriangle, RotateCcw, Send, Sparkles } from "lucide-react";
 import type { KitPlan, KitVersion } from "@/contract";
 import { runSummary, runUserText, type RunState } from "@/lib/client/kit-run";
+import { assumptionCorrection, undoableRemoval } from "@/lib/client/kit-edits";
 import { budgetChoiceLabel, clarifyQuestion, DEFAULT_BUDGET_CHOICES } from "@/lib/client/kit-text";
 import { Timeline } from "./Timeline";
 
@@ -27,6 +30,8 @@ export interface ChatColumnProps {
   onSend(text: string): void;
   onChooseBudget(budget: number | null): void;
   onRetry(): void;
+  /** Undo on a "Removed: X" line → adjust restore_item. */
+  onRestoreItem?(itemKey: string): void;
 }
 
 function UserBubble({ text }: { text: string }) {
@@ -50,15 +55,54 @@ function Assistant({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Chips({ plan }: { plan: KitPlan }) {
+const CHIP = "rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs text-orange-800";
+
+/** Assumption chips; with `onCorrect` a click opens a small input prefilled with the chip, Enter sends the correction. */
+function Chips({ plan, busy, onCorrect }: { plan: KitPlan; busy?: boolean; onCorrect?(text: string): void }) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [text, setText] = useState("");
   if (plan.assumptions.length === 0) return null;
+  const onKey = (e: KeyboardEvent<HTMLInputElement>, a: string) => {
+    if (e.key === "Escape") setEditing(null);
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    const t = text.trim();
+    if (t && t !== a && onCorrect) onCorrect(assumptionCorrection(a, t));
+    setEditing(null);
+  };
   return (
     <ul aria-label="Assumptions" className="flex flex-wrap gap-1.5">
-      {plan.assumptions.map((a) => (
-        <li key={a} className="rounded-full border border-orange-200 bg-orange-50 px-2.5 py-0.5 text-xs text-orange-800">
-          {a}
-        </li>
-      ))}
+      {plan.assumptions.map((a) =>
+        !onCorrect ? (
+          <li key={a} className={CHIP}>
+            {a}
+          </li>
+        ) : editing === a ? (
+          <li key={a}>
+            <input
+              aria-label="Edit assumption"
+              autoFocus
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => onKey(e, a)}
+              onBlur={() => setEditing(null)}
+              className="w-48 rounded-full border border-[var(--kitly-accent)] px-2.5 py-0.5 text-xs outline-none"
+            />
+          </li>
+        ) : (
+          <li key={a}>
+            <button
+              type="button"
+              disabled={busy}
+              title="Not right? Click to correct"
+              onClick={() => (setEditing(a), setText(a))}
+              className={`${CHIP} hover:border-[var(--kitly-accent)] disabled:opacity-60`}
+            >
+              {a}
+            </button>
+          </li>
+        ),
+      )}
     </ul>
   );
 }
@@ -94,13 +138,27 @@ function Clarify({
   );
 }
 
-function SystemLine({ text }: { text: string }) {
-  return <li className="text-center text-xs text-gray-500">⚙ {text}</li>;
+function SystemLine({ text, onUndo, busy }: { text: string; onUndo?(): void; busy?: boolean }) {
+  return (
+    <li className="text-center text-xs text-gray-500">
+      ⚙ {text}
+      {onUndo && (
+        <>
+          {" · "}
+          <button type="button" disabled={busy} onClick={onUndo} className="font-medium text-[var(--kitly-accent)] hover:underline disabled:opacity-50">
+            Undo
+          </button>
+        </>
+      )}
+    </li>
+  );
 }
 
-export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBudget, onRetry }: ChatColumnProps) {
+export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBudget, onRetry, onRestoreItem }: ChatColumnProps) {
   const endRef = useRef<HTMLLIElement>(null);
   const last = versions[versions.length - 1];
+  // Chips are editable on the newest assistant message (adjust/restore versions are system lines without chips).
+  const lastAssistant = [...versions].reverse().find((v) => v.kind === "new" || v.kind === "refine");
   // A finished run whose version is already loaded is shown from the saved version instead.
   const liveRun = run && !(run.status === "done" && versions.some((v) => v.version === run.version)) ? run : null;
   const empty = versions.length === 0 && !liveRun;
@@ -140,14 +198,19 @@ export function ChatColumn({ versions, run, summaries, busy, onSend, onChooseBud
     <div className="flex h-full flex-col">
       <ol aria-label="Conversation" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
         {versions.map((v) => {
-          if (v.kind === "adjust" || v.kind === "restore") return <SystemLine key={v.version} text={v.userText} />;
+          if (v.kind === "adjust" || v.kind === "restore") {
+            const undoKey = onRestoreItem ? undoableRemoval(v, last) : null;
+            return (
+              <SystemLine key={v.version} text={v.userText} busy={busy} onUndo={undoKey ? () => onRestoreItem!(undoKey) : undefined} />
+            );
+          }
           const awaiting = v.status === "awaiting_budget";
           return [
             <UserBubble key={`u${v.version}`} text={v.userText} />,
             <Assistant key={`a${v.version}`}>
               <p className="text-xs text-gray-500">{summaries[v.version] ?? `Planned ${v.plan.items.length} items`}</p>
               {v.explanation && <p className="whitespace-pre-wrap">{v.explanation}</p>}
-              <Chips plan={v.plan} />
+              <Chips plan={v.plan} busy={busy} onCorrect={v === lastAssistant && !liveRun ? onSend : undefined} />
               {awaiting && v === last && !liveRun && (
                 <Clarify text={clarifyQuestion(v.plan.language)} choices={DEFAULT_BUDGET_CHOICES} busy={busy} onChoose={onChooseBudget} />
               )}
