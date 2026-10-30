@@ -7,7 +7,7 @@ import type { AdviceStore } from "@/server/advicestore";
 import type { LLMClient } from "@/server/llm";
 import type { WatchStore } from "@/server/watchstore";
 import { adviceFor } from "./advice";
-import { aggregate, insightWindow, UNMET_BELOW, VISIBLE_FROM, type GapStats } from "./aggregate";
+import { aggregate, gapKey, insightWindow, UNMET_BELOW, VISIBLE_FROM, type GapStats } from "./aggregate";
 import { classifyGaps, type Classification, type JudgeCache } from "./classify";
 
 export { type JudgeCache } from "./classify";
@@ -87,11 +87,20 @@ export async function buildInsights(deps: InsightsDeps, shopId: string): Promise
     watchers: watchers.get(g.key) ?? 0,
   }));
 
+  // a live item of a known gap is named like that gap's card (the planner's own label varies: "School backpack",
+  // "Balo chống gù"); null-category items keep their own label (the gap name is a "Not in catalog: …" summary)
+  const gapName = new Map(agg.gaps.filter((g) => g.category !== null).map((g) => [g.key, g.needLabel]));
   const recent = live
     .filter((r) => r.source === "live" && r.matchedCount < UNMET_BELOW)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, RECENT_MAX)
-    .map((r) => ({ needLabel: r.needLabel, category: r.category, tags: r.tags, event: r.event, createdAt: r.createdAt }));
+    .map((r) => ({
+      needLabel: (r.category !== null && gapName.get(gapKey(r.category, r.tags))) || r.needLabel,
+      category: r.category,
+      tags: r.tags,
+      event: r.event,
+      createdAt: r.createdAt,
+    }));
 
   return { window, gaps, combos: agg.combos, topNeeds: agg.topNeeds, recent };
 }

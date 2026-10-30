@@ -338,6 +338,16 @@ describe("buildInsights: recent (D35)", () => {
     expect(before.recent.map((r) => r.needLabel)).not.toContain("Notebooks");
   });
 
+  // rehearsal 2 (31/10): the Beat 1 live query showed up as "School backpack" / "Balo chống gù" (the planner's own label)
+  // while the card below says "Anti-hunchback backpack" — the strip must name the need like its gap card does
+  it("a live item that belongs to a known gap carries that gap's name; items without a category keep their own", async () => {
+    const { adapter, run } = setup();
+    await session(adapter, [item("School backpack", "school-backpack", ["anti-hunchback"]), item("Dog bed", null)], { source: "live" });
+    const res = await run("shop-minhan");
+    const labels = res.recent.slice(0, 2).map((r) => r.needLabel).sort();
+    expect(labels).toEqual(["Anti-hunchback backpack", "Dog bed"]);
+  });
+
   it("caps at 10", async () => {
     const { adapter, run } = setup();
     for (let i = 0; i < 12; i++) await session(adapter, [item(`Live need ${i}`, null)], { source: "live" });
