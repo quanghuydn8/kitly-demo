@@ -176,7 +176,7 @@ async function optionsExplainAndSave(ctx: RunContext, emit: Emit, signal?: Abort
   let explanation = "";
   let explainFailed = false;
   try {
-    for await (const delta of streamExplanation(llm, plan, chosen, signal, ctx.changes, sales)) {
+    for await (const delta of streamExplanation(llm, plan, chosen, signal, ctx.changes, sales, options)) {
       explanation += delta;
       emit({ event: "explanation", data: { delta } });
     }

@@ -46,7 +46,9 @@ export class InMemoryAdapter implements CommerceAdapter {
   private sessions = new Map<string, Session>();
   private rows: Row[] = [];
 
-  constructor() {
+  /** `extraProducts` (tests only): appended to the fixture catalog, e.g. a deeper catalog for the three-baskets test. */
+  constructor(opts: { extraProducts?: Product[] } = {}) {
+    if (opts.extraProducts) this.products.push(...ProductSchema.array().parse(opts.extraProducts));
     for (const s of demandFixture) {
       const session: Session = { ...s, event: s.event as EventType, plan: null, source: s.source as Source };
       this.sessions.set(s.id, session);

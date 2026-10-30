@@ -25,6 +25,35 @@ function changeFacts(plan: KitPlan, { previous, diff }: ExplainChanges): string[
   return ["What changed since the previous version:", ...(out.length ? out : ["- Nothing in the plan changed"])];
 }
 
+const PROFILE_NAME = { saver: "Saver", balanced: "Balanced", premium: "Premium" } as const;
+
+/**
+ * Ticket 20a: one code-computed line per other basket vs Balanced (total difference + the items whose product
+ * differs), so the model can add one short line on how Saver and Premium differ. Identical baskets say so.
+ */
+function comparisonFacts(plan: KitPlan, balanced: BasketOption, alternatives: BasketOption[]): string[] {
+  const label = (key: string) => plan.items.find((i) => i.key === key)?.needLabel ?? key;
+  if (balanced.profile !== "balanced") return []; // a profiles subset without Balanced: nothing to compare against
+  const productOf = (o: BasketOption) => new Map(o.lines.map((l) => [l.itemKey, l.product.id]));
+  const mine = productOf(balanced);
+  const out: string[] = [];
+  for (const o of alternatives) {
+    if (o.profile === "balanced") continue;
+    const theirs = productOf(o);
+    const keys = [...new Set([...mine.keys(), ...theirs.keys()])].filter((k) => mine.get(k) !== theirs.get(k));
+    const delta = o.grandTotal - balanced.grandTotal;
+    const name = `${PROFILE_NAME[o.profile]} basket`;
+    if (!keys.length && delta === 0) {
+      out.push(`${name}: same as Balanced`);
+      continue;
+    }
+    const money = delta === 0 ? "same total as Balanced" : `${formatVnd(Math.abs(delta))} ${delta < 0 ? "less" : "more"} than Balanced`;
+    const how = o.profile === "saver" ? "cheaper picks" : o.profile === "premium" ? "higher-rated picks" : "other picks";
+    out.push(`${name}: ${money}${keys.length ? `; ${how} for ${keys.map(label).join(", ")}` : ""}`);
+  }
+  return out.length ? ["Other baskets the buyer can switch to:", ...out] : [];
+}
+
 /** What the marketplace knows about the buyer, as facts lines (D39–D46). */
 function salesFacts(sales: SalesContext): string[] {
   const out: string[] = [];
@@ -40,7 +69,14 @@ function salesFacts(sales: SalesContext): string[] {
   return out.length ? ["What the marketplace knows about the buyer:", ...out] : [];
 }
 
-export function explainerMessages(plan: KitPlan, option: BasketOption, changes?: ExplainChanges, sales?: SalesContext): LLMMessage[] {
+export function explainerMessages(
+  plan: KitPlan,
+  option: BasketOption,
+  changes?: ExplainChanges,
+  sales?: SalesContext,
+  alternatives: BasketOption[] = [],
+): LLMMessage[] {
+  const comparison = comparisonFacts(plan, option, alternatives);
   const lang = plan.language === "vi" ? "Vietnamese" : "English";
   const system = [
     `You explain a shopping kit to the buyer in ${lang}. Plain text, no markdown, no lists.`,
@@ -49,6 +85,9 @@ export function explainerMessages(plan: KitPlan, option: BasketOption, changes?:
     'For a gap with a closest product, name it and what it lacks (e.g. "closest: Minh An Kids Backpack, missing anti-hunchback").',
     "Use only the facts and numbers given; never invent products, prices or dates. Money format: 1.500.000₫.",
     ...(changes ? ["This is a revised kit: start with what changed (from the facts), then say the new total."] : []),
+    ...(comparison.length
+      ? ["Describe the Balanced basket, then add one short line on how Saver and Premium differ (from the other-baskets facts), still within the limit."]
+      : []),
     ...(sales ? ["You may mention the wallet saving or the cart product; only these numbers."] : []),
   ].join("\n");
   const label = (key: string) => plan.items.find((i) => i.key === key)?.needLabel ?? key;
@@ -85,6 +124,7 @@ export function explainerMessages(plan: KitPlan, option: BasketOption, changes?:
   if (option.skipped.length) facts.push(`Skipped for budget: ${option.skipped.map((s) => s.needLabel).join(", ")}`);
   if (option.minimumCost) facts.push(`Minimum cost of the must-haves: ${formatVnd(option.minimumCost)}`);
   if (sales) facts.push(...salesFacts(sales));
+  facts.push(...comparison);
   return [
     { role: "system", content: system },
     { role: "user", content: facts.join("\n") },
@@ -98,7 +138,8 @@ export function streamExplanation(
   signal?: AbortSignal,
   changes?: ExplainChanges,
   sales?: SalesContext,
+  alternatives?: BasketOption[],
 ): AsyncIterable<string> {
   const { fast } = llmModels();
-  return llm.stream(fast.model, explainerMessages(plan, option, changes, sales), { effort: fast.effort, signal });
+  return llm.stream(fast.model, explainerMessages(plan, option, changes, sales, alternatives), { effort: fast.effort, signal });
 }
