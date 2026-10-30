@@ -39,13 +39,23 @@ export function followUpMessages(input: FollowUpInput): LLMMessage[] {
     "Prefer the first hook in `hooks` when it is relevant (hooks are in priority order): deadline_soon = few days left before the deadline (offer express delivery); cart_interest = a product the buyer left in the cart fits an item; voucher_expiring = a wallet voucher expires soon; freeship_gap = a little more at a shop gives free shipping; favorite_shop_promo = a favourite shop has a voucher.",
     "Use ONLY facts from the JSON context and the kit totals: every number, price, voucher code, date and product name must come from there. Never invent any. Money format: 440.000₫.",
     `Then write 2–3 short suggestions (at most ${MAX_SUGGESTION} characters each), written as what the buyer would type next.`,
-    "interestItemKey: the itemKey of a cart interest when the suggestion means switching to that cart product, else null.",
+    "interestItemKey: the itemKey of a cart interest when the suggestion means switching to that cart product, else null. Clicking it switches the product, so its text must say switch (e.g. \"Switch to KidZone Lite\" / \"Đổi sang KidZone Lite\"), never just view.",
+    "The kit is already built from the buyer's message (see Kit lines below): never offer to search for or find products, and never repeat the buyer's request back as a question. Ask about one next step for THIS kit.",
   ].join("\n");
   const o = input.option;
   const totals = o
     ? `Kit totals: total ${formatVnd(o.grandTotal)}, items ${formatVnd(o.itemsTotal)}, shipping ${formatVnd(o.shippingTotal)}, discounts ${formatVnd(o.discountTotal)}; budget ${input.plan.budget === null ? "none" : formatVnd(input.plan.budget)}`
     : "Kit totals: none yet (waiting for a budget)";
-  const user = [`Buyer's last message: ${input.lastMessage}`, `Context (JSON): ${JSON.stringify(input.context)}`, totals].join("\n");
+  // what the kit holds right now, so the question never offers to "find" something the kit already has (rehearsal 2)
+  const lines = o ? o.lines.map((l) => `${l.product.title} (${l.itemKey})`).join("; ") || "none" : "none yet";
+  const missing = o ? o.noMatch.map((n) => n.needLabel).join("; ") || "none" : "none yet";
+  const user = [
+    `Buyer's last message: ${input.lastMessage}`,
+    `Context (JSON): ${JSON.stringify(input.context)}`,
+    totals,
+    `Kit lines: ${lines}`,
+    `No exact match in the store: ${missing}`,
+  ].join("\n");
   return [
     { role: "system", content: system },
     { role: "user", content: user },

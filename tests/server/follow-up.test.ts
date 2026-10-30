@@ -44,6 +44,23 @@ describe("followUp: the model call", () => {
     expect(prompt).toContain("My kid starts Grade 1.");
   });
 
+  it("the prompt shows what the kit already holds and forbids offering to search (the kit is already built)", async () => {
+    // rehearsal 2 (31/10): after the listing fix the backpack was an exact match, yet the model (seeing only the need
+    // sentence) asked "find an anti-hunchback backpack under 400k?" — it must see the kit, not just the request
+    const input = await heroInput("vi");
+    const llm = new FakeLLM({ structured: [llmOut("Bạn cần giao hoả tốc không?", [{ text: "Có" }, { text: "Không" }])] });
+    await followUp(llm, input);
+    const prompt = llm.calls[0].messages.map((m) => m.content).join("\n");
+    expect(prompt).toMatch(/never offer to search for|never offer to find/i);
+    expect(prompt).toMatch(/never repeat the buyer's request/i);
+    // a pill tied to a cart interest SWAPS on click, so its words must say switch, not "view"
+    expect(prompt).toMatch(/clicking it switches the product/i);
+    for (const l of input.option!.lines) expect(prompt).toContain(l.product.title);
+    const missing = input.option!.noMatch.map((n) => n.needLabel);
+    expect(missing.length).toBeGreaterThan(0);
+    for (const m of missing) expect(prompt).toContain(m);
+  });
+
   it("vi plan ⇒ the prompt asks for Vietnamese", async () => {
     const llm = new FakeLLM({ structured: [llmOut("Bạn cần giao hoả tốc không?", [{ text: "Có" }, { text: "Không" }])] });
     await followUp(llm, await heroInput("vi"));
