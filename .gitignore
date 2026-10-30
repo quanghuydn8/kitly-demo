@@ -1,0 +1,7 @@
+node_modules/
+.next/
+.env
+.env.local
+scripts/.cache/
+e2e/artifacts/
+.vercel/
