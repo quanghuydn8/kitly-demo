@@ -123,15 +123,24 @@ export function postProcessPlan(raw: PlannerOutput, today: string): KitPlan {
     };
   });
   const deadline = raw.deadline && isRealDate(raw.deadline) && raw.deadline >= today ? raw.deadline : null;
+  let assumptions = raw.assumptions.map((a) => a.trim()).filter(Boolean);
+  if (raw.event === "back_to_school" && deadline === nextSchoolOpening(today)) {
+    // D45 chip written by code: the model paraphrased it differently run to run (rehearsal 2), the demo checks it
+    assumptions = [SCHOOL_CHIP[raw.language], ...assumptions.filter((a) => !SCHOOL_DATE.test(a))];
+  }
   return {
     event: raw.event,
     language: raw.language,
     budget: positiveOrNull(raw.budget),
     deadline,
     items,
-    assumptions: raw.assumptions.map((a) => a.trim()).filter(Boolean),
+    assumptions,
   };
 }
+
+export const SCHOOL_CHIP = { en: "By Sep 5 (school opening)", vi: "Trước 5/9 (khai giảng)" } as const;
+/** A model-written chip about the school-opening date (any language) — replaced by SCHOOL_CHIP. */
+const SCHOOL_DATE = /\b0?5\/0?9\b|\bsep(?:t(?:ember)?)?\.?\s*0?5\b|\b0?5\s*(?:th\s*)?(?:of\s*)?sep|khai giảng|school (?:opening|opens|starts|year)/i;
 
 /** One structured call on the planner model, retried once; the second failure is PlannerError("llm_error"). */
 export async function callPlanner<T>(llm: LLMClient, schema: z.ZodType<T>, messages: LLMMessage[], name: string): Promise<T> {

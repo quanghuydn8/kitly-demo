@@ -88,6 +88,36 @@ describe("planKit: post-processing (applied whatever the LLM returned)", () => {
   });
 });
 
+describe("planKit: the school-opening chip is code-made (D45)", () => {
+  // rehearsal 2 (31/10): the model wrote "Hạn chuẩn bị trước ngày khai giảng 5/9" one run and "By Sep 5 (school
+  // opening)" the next — the DEMO checks the chip, so code writes it
+  it("vi back_to_school with deadline Sep 5: the model's own date chip is replaced by the canonical vi chip, first", async () => {
+    const raw = { ...sloppyHeroPlan(), language: "vi", assumptions: ["1 trẻ", "Hạn chuẩn bị trước ngày khai giảng 5/9", "Lớp 1"] };
+    const plan = await planKit(new FakeLLM({ structured: [raw] }), HERO, { today: TODAY });
+    expect(plan.assumptions).toEqual(["Trước 5/9 (khai giảng)", "1 trẻ", "Lớp 1"]);
+  });
+
+  it("en: chip added when the model forgot it; an English paraphrase is replaced", async () => {
+    const none = await planKit(new FakeLLM({ structured: [{ ...sloppyHeroPlan(), assumptions: ["1 child"] }] }), HERO, { today: TODAY });
+    expect(none.assumptions).toEqual(["By Sep 5 (school opening)", "1 child"]);
+    const para = await planKit(
+      new FakeLLM({ structured: [{ ...sloppyHeroPlan(), assumptions: ["Deadline: school starts September 5", "1 child"] }] }),
+      HERO,
+      { today: TODAY },
+    );
+    expect(para.assumptions).toEqual(["By Sep 5 (school opening)", "1 child"]);
+  });
+
+  it("other deadlines or events are left alone", async () => {
+    const express = await planKit(
+      new FakeLLM({ structured: [{ ...sloppyHeroPlan({ deadline: "2026-09-04" }), assumptions: ["Express delivery"] }] }),
+      HERO,
+      { today: TODAY },
+    );
+    expect(express.assumptions).toEqual(["Express delivery"]);
+  });
+});
+
 describe("planKit: retry", () => {
   it("retries once after an invalid structured output, then succeeds", async () => {
     const llm = new FakeLLM({ structured: ["{not json", sloppyHeroPlan()] });
