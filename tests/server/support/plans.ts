@@ -59,3 +59,14 @@ export function puppyPlan(budget: number | null = null) {
     assumptions: [],
   };
 }
+
+/** The refine planner's output: a (sloppy) plan + intent (CONTRACT §3, D42). */
+export function refineOutput<P extends object>(plan: P, intent: "change_kit" | "answer" = "change_kit") {
+  return { intent, ...plan };
+}
+
+/** sloppyHeroPlan without some items (by key). */
+export function heroWithout(keys: string[], over: Parameters<typeof sloppyHeroPlan>[0] = {}) {
+  const p = sloppyHeroPlan(over);
+  return { ...p, items: p.items.filter((i) => !keys.includes(i.key)) };
+}

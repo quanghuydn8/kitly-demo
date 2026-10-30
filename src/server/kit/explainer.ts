@@ -1,10 +1,30 @@
 // Explainer (PRD "Explainer"): plan + chosen option → short streamed text in the plan language (fast model).
-// The model only sees code-computed facts, so every number it can cite is real.
-import type { BasketOption, KitPlan } from "@/contract";
+// The model only sees code-computed facts, so every number it can cite is real. On a refine it also gets what changed
+// (code-computed from the PlanDiff and the previous plan) and must start with it, then the new total.
+import type { BasketOption, KitPlan, PlanDiff } from "@/contract";
 import { formatVnd } from "@/server/optimizer";
 import { llmModels, type LLMClient, type LLMMessage } from "@/server/llm";
 
-export function explainerMessages(plan: KitPlan, option: BasketOption): LLMMessage[] {
+/** A refine's changes vs the previous version (CONTRACT KitVersion.diff). */
+export interface ExplainChanges {
+  previous: KitPlan;
+  diff: PlanDiff;
+}
+
+function changeFacts(plan: KitPlan, { previous, diff }: ExplainChanges): string[] {
+  const label = (p: KitPlan, key: string) => p.items.find((i) => i.key === key)?.needLabel ?? key;
+  const money = (n: number | null) => (n === null ? "none" : formatVnd(n));
+  const out: string[] = [];
+  if (diff.added.length) out.push(`- Added: ${diff.added.map((k) => label(plan, k)).join(", ")}`);
+  if (diff.removed.length) out.push(`- Removed: ${diff.removed.map((k) => label(previous, k)).join(", ")}`);
+  if (diff.changed.length) out.push(`- Changed: ${diff.changed.map((k) => label(plan, k)).join(", ")}`);
+  if (previous.budget !== plan.budget) out.push(`- Budget changed: ${money(previous.budget)} → ${money(plan.budget)}`);
+  if (previous.deadline !== plan.deadline)
+    out.push(`- Deadline changed: ${previous.deadline ?? "none"} → ${plan.deadline ?? "none"}`);
+  return ["What changed since the previous version:", ...(out.length ? out : ["- Nothing in the plan changed"])];
+}
+
+export function explainerMessages(plan: KitPlan, option: BasketOption, changes?: ExplainChanges): LLMMessage[] {
   const lang = plan.language === "vi" ? "Vietnamese" : "English";
   const system = [
     `You explain a shopping kit to the buyer in ${lang}. Plain text, no markdown, no lists.`,
@@ -12,9 +32,11 @@ export function explainerMessages(plan: KitPlan, option: BasketOption): LLMMessa
     "Say the total against the budget, the main savings, and every gap honestly.",
     'For a gap with a closest product, name it and what it lacks (e.g. "closest: Minh An Kids Backpack, missing anti-hunchback").',
     "Use only the facts and numbers given; never invent products, prices or dates. Money format: 1.500.000₫.",
+    ...(changes ? ["This is a revised kit: start with what changed (from the facts), then say the new total."] : []),
   ].join("\n");
   const label = (key: string) => plan.items.find((i) => i.key === key)?.needLabel ?? key;
   const facts: string[] = [
+    ...(changes ? changeFacts(plan, changes) : []),
     `Budget: ${plan.budget === null ? "none" : formatVnd(plan.budget)}`,
     `Deadline: ${plan.deadline ?? "none"}`,
     `Status: ${option.status}${option.overBy ? ` (over budget by ${formatVnd(option.overBy)})` : ""}`,
@@ -56,7 +78,8 @@ export function streamExplanation(
   plan: KitPlan,
   option: BasketOption,
   signal?: AbortSignal,
+  changes?: ExplainChanges,
 ): AsyncIterable<string> {
   const { fast } = llmModels();
-  return llm.stream(fast.model, explainerMessages(plan, option), { effort: fast.effort, signal });
+  return llm.stream(fast.model, explainerMessages(plan, option, changes), { effort: fast.effort, signal });
 }

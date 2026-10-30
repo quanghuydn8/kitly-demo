@@ -44,3 +44,31 @@ describe("streamExplanation", () => {
     expect(llm.calls[0].messages[0].content).toMatch(/Vietnamese/);
   });
 });
+
+describe("streamExplanation: refine changes", () => {
+  it("on a refine the facts start with what changed (labels, budget, deadline) and the prompt asks for it first", async () => {
+    const llm = new FakeLLM({ stream: ["ok"] });
+    const previous: KitPlan = {
+      ...plan,
+      budget: 1_500_000,
+      deadline: "2026-09-05",
+      items: [...plan.items, { ...plan.items[0], key: "uniform", needLabel: "Uniform shirt" }],
+    };
+    const next: KitPlan = { ...plan, budget: 1_000_000, deadline: "2026-09-04" };
+    const diff = { added: [], removed: ["uniform"], changed: [plan.items[1].key] };
+    await collect(streamExplanation(llm, next, balanced, undefined, { previous, diff }));
+    const [system, user] = llm.calls[0].messages;
+    expect(system.content).toMatch(/start with what changed[^\n]*new total/i);
+    expect(user.content.startsWith("What changed since the previous version:")).toBe(true);
+    expect(user.content).toContain("- Removed: Uniform shirt");
+    expect(user.content).toContain(`- Changed: ${plan.items[1].needLabel}`);
+    expect(user.content).toContain("- Budget changed: 1.500.000₫ → 1.000.000₫");
+    expect(user.content).toContain("- Deadline changed: 2026-09-05 → 2026-09-04");
+  });
+
+  it("a new kit has no change facts", async () => {
+    const llm = new FakeLLM({ stream: ["ok"] });
+    await collect(streamExplanation(llm, plan, balanced));
+    expect(llm.calls[0].messages.map((m) => m.content).join("\n")).not.toMatch(/what changed/i);
+  });
+});

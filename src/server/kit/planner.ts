@@ -54,10 +54,10 @@ export function nextSchoolOpening(today: string): string {
   return today <= thisYear ? thisYear : `${year + 1}-09-05`;
 }
 
-export function plannerMessages(query: string, today: string): LLMMessage[] {
+/** The planning rules shared by the planner and the refine planner (one source for both prompts). */
+export function plannerRules(today: string): string[] {
   const cats = CATEGORIES.map((c) => `${c.id} (${c.label}, ${c.event})`).join("; ");
-  const system = [
-    "You are Kitly's planner for DemoMart, a Vietnamese marketplace. Turn the buyer's need sentence into a shopping plan (KitPlan).",
+  return [
     `Today is ${today}. Money is integer VND (1.5M = 1500000, 400k = 400000).`,
     "Language: Vietnamese input → language vi, otherwise en. needLabel and assumptions are written in that language.",
     `Categories (use only these ids): ${cats}.`,
@@ -72,6 +72,13 @@ export function plannerMessages(query: string, today: string): LLMMessage[] {
     "assumptions: short chips for what you assumed (e.g. \"1 child\", \"Grade 1\").",
     "key: short kebab-case id, unique in the plan (e.g. backpack, water-bottle).",
     "Be consistent: the same sentence must give the same plan, with the usual items for the occasion. Still list the full kit — typically 8–10 items for back_to_school, for tet_gifts 5–8 gift items.",
+  ];
+}
+
+export function plannerMessages(query: string, today: string): LLMMessage[] {
+  const system = [
+    "You are Kitly's planner for DemoMart, a Vietnamese marketplace. Turn the buyer's need sentence into a shopping plan (KitPlan).",
+    ...plannerRules(today),
   ].join("\n");
   return [
     { role: "system", content: system },
@@ -125,20 +132,21 @@ export function postProcessPlan(raw: PlannerOutput, today: string): KitPlan {
   };
 }
 
-export async function planKit(llm: LLMClient, query: string, opts: { today: string }): Promise<KitPlan> {
+/** One structured call on the planner model, retried once; the second failure is PlannerError("llm_error"). */
+export async function callPlanner<T>(llm: LLMClient, schema: z.ZodType<T>, messages: LLMMessage[], name: string): Promise<T> {
   const { planner } = llmModels();
-  const messages = plannerMessages(query, opts.today);
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const raw = await llm.structured(planner.model, PlannerOutputSchema, messages, {
-        effort: planner.effort,
-        name: "kit_plan",
-      });
-      return postProcessPlan(raw, opts.today);
+      return await llm.structured(planner.model, schema, messages, { effort: planner.effort, name });
     } catch (err) {
       lastError = err;
     }
   }
   throw new PlannerError(`Planner failed: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
+}
+
+export async function planKit(llm: LLMClient, query: string, opts: { today: string }): Promise<KitPlan> {
+  const raw = await callPlanner(llm, PlannerOutputSchema, plannerMessages(query, opts.today), "kit_plan");
+  return postProcessPlan(raw, opts.today);
 }

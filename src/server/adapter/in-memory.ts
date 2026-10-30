@@ -123,6 +123,11 @@ export class InMemoryAdapter implements CommerceAdapter {
     }
   }
 
+  /** Test helper (not in the contract): number of intent sessions, seeded + recorded. */
+  intentSessionCount(): number {
+    return this.sessions.size;
+  }
+
   async demandItemsSince(sinceIso: string, filter?: { category?: CategoryId }): Promise<DemandItemRow[]> {
     return this.rows
       .filter((r) => r.createdAt >= sinceIso && (!filter?.category || r.category === filter.category))
