@@ -32,7 +32,7 @@ export interface Classification {
 const JudgementSchema = z.object({ supports: z.boolean(), evidence: z.string() });
 
 // Plain-language meaning of tags the model is asked about (helps it read specs like "keeps the spine straight").
-const TAG_HINTS: Record<string, string> = {
+export const TAG_HINTS: Record<string, string> = {
   "anti-hunchback": "ergonomic back support / S-shaped straps that keep a child's spine straight",
   lightweight: "light weight, e.g. under about 1 kg for a backpack",
   waterproof: "waterproof or water-resistant material",
