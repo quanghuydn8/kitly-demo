@@ -16,6 +16,9 @@ npm run dev                    # http://localhost:3000
 npm test                       # Vitest (server + ui projects)
 npm run build
 npm run lint
+npm run db:migrate             # Supabase: (re)create the Kitly tables in KITLY_DB_SCHEMA via SUPABASE_DB_URL
+npm run seed                   # DemoMart world: 25 shops, ~360 products (LLM, cached in scripts/.cache/), demand history
+npm run test:supabase          # same suites + the Supabase contract/planted-fact tests against the seeded DB (.env)
 npm run e2e                    # Playwright against BASE_URL (browsers: npx playwright install chromium)
 ```
 
@@ -25,4 +28,5 @@ npm run e2e                    # Playwright against BASE_URL (browsers: npx play
 - `src/server/kitstore/` — `KitStore` (threads / versions / answer messages); `getKitStore()`.
 - `src/server/llm/` — the one LLM client (`OpenAILLM`, honours `OPENAI_BASE_URL`) + `FakeLLM` for tests.
 - `src/middleware.ts` — `kitly_uid` owner cookie + optional Basic Auth (`KITLY_BASIC_AUTH=user:pass`).
+- `src/server/seed/` — seed world: shops, planted facts, LLM catalog generator, depth rule, demand generator; `src/server/db/` — schema name, migration builder, pg + supabase-js clients; `scripts/` — `db:migrate`, `seed`.
 - `src/app/api/` — route handlers (CONTRACT §3). `supabase/migrations/` — schema (DATA.md §6).
