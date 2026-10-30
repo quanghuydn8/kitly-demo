@@ -174,6 +174,15 @@ describe("KitPanel", () => {
     expect(screen.getByText("Missing: anti-hunchback")).toBeTruthy();
   });
 
+  // rehearsal 2 (31/10): at 1440×900 the No-exact-match row (closest + 💛 card) sat below 9 basket rows, off screen,
+  // exactly when the presenter says "closest product and what it lacks"
+  it("the No exact match block comes before the basket rows", () => {
+    panel([withNoMatch([heroNoMatch])]);
+    const noMatch = screen.getByRole("list", { name: "No exact match" });
+    const basket = screen.getByRole("list", { name: "Basket" });
+    expect(noMatch.compareDocumentPosition(basket) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("with plan.language = vi the noMatch sentence is Vietnamese", () => {
     panel([withNoMatch([{ ...heroNoMatch, needLabel: "Balo chống gù" }], "vi")]);
     expect(screen.getByText("Chưa có balo chống gù dưới 400.000 ₫")).toBeTruthy();

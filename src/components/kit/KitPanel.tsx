@@ -433,6 +433,23 @@ function VersionBody({
         </p>
       )}
 
+      {/* first: the honest gap (closest + 💛 card) is what Beat 1 talks about; below the fold it was missed (rehearsal 2) */}
+      {exact.length > 0 && (
+        <ul aria-label="No exact match" className="space-y-2">
+          {exact.map((n) => (
+            <NoMatchRow
+              key={n.itemKey}
+              row={n}
+              plan={v.plan}
+              readOnly={readOnly}
+              busy={busy}
+              onAddAnyway={() => onAddAnyway?.(v.version, profile, n.itemKey, n.closest!.candidate.product.id)}
+              extra={cartCard(n.itemKey)}
+            />
+          ))}
+        </ul>
+      )}
+
       {option.lines.length > 0 && (
         <ul aria-label="Basket" className="divide-y rounded-xl border bg-white">
           {option.lines.map((l) => (
@@ -447,22 +464,6 @@ function VersionBody({
               onSwap={(productId) => onSwap(v.version, profile, l.itemKey, productId)}
               onRemove={() => onRemoveItem?.(l.itemKey)}
               onTakeOut={() => onTakeOut?.(v.version, profile, l.itemKey)}
-            />
-          ))}
-        </ul>
-      )}
-
-      {exact.length > 0 && (
-        <ul aria-label="No exact match" className="space-y-2">
-          {exact.map((n) => (
-            <NoMatchRow
-              key={n.itemKey}
-              row={n}
-              plan={v.plan}
-              readOnly={readOnly}
-              busy={busy}
-              onAddAnyway={() => onAddAnyway?.(v.version, profile, n.itemKey, n.closest!.candidate.product.id)}
-              extra={cartCard(n.itemKey)}
             />
           ))}
         </ul>
