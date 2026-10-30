@@ -61,6 +61,23 @@ describe("followUp: the model call", () => {
     for (const m of missing) expect(prompt).toContain(m);
   });
 
+  // rehearsal 2 (31/10): after "Choose express delivery" the deadline_soon hook was gone, yet the model (seeing daysLeft 2)
+  // asked "prioritize express delivery?" again
+  it("an express kit (deadline ≤ today + 2) tells the model delivery is already express", async () => {
+    const base = await heroInput();
+    const plan = { ...base.plan, deadline: "2026-09-04" };
+    const w = await heroWorld("lan");
+    const context = buildSalesContext(plan, base.option, w.persona, w.vouchers, TODAY, w.shops);
+    const llm = new FakeLLM({ structured: [llmOut("Switch backpacks?", [{ text: "Yes" }, { text: "No" }])] });
+    await followUp(llm, { ...base, plan, context });
+    const prompt = llm.calls[0].messages.map((m) => m.content).join("\n");
+    expect(prompt).toMatch(/already express/i);
+    expect(prompt).toMatch(/do not offer express/i);
+    const normal = new FakeLLM({ structured: [llmOut("Need express delivery?", [{ text: "Yes" }, { text: "No" }])] });
+    await followUp(normal, base);
+    expect(normal.calls[0].messages.map((m) => m.content).join("\n")).not.toMatch(/already express/i);
+  });
+
   it("vi plan ⇒ the prompt asks for Vietnamese", async () => {
     const llm = new FakeLLM({ structured: [llmOut("Bạn cần giao hoả tốc không?", [{ text: "Có" }, { text: "Không" }])] });
     await followUp(llm, await heroInput("vi"));

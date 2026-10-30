@@ -8,6 +8,7 @@ import type { BasketOption, FollowUp, KitPlan, SalesContext, Voucher } from "@/c
 import { llmModels, type LLMClient, type LLMMessage } from "@/server/llm";
 import { formatVnd } from "@/server/optimizer";
 import { shortDate } from "@/server/optimizer/labels";
+import { EXPRESS_DAYS } from "./sales-context";
 
 export const FOLLOWUP_TIMEOUT_MS = 8_000;
 const MAX_SUGGESTION = 40;
@@ -55,6 +56,10 @@ export function followUpMessages(input: FollowUpInput): LLMMessage[] {
     totals,
     `Kit lines: ${lines}`,
     `No exact match in the store: ${missing}`,
+    // the hook alone was not enough: seeing daysLeft 2 the model offered express again (rehearsal 2)
+    ...(input.context.daysLeft !== null && input.context.daysLeft <= EXPRESS_DAYS
+      ? [`Delivery is already express (deadline in ${input.context.daysLeft} days): do not offer express delivery again.`]
+      : []),
   ].join("\n");
   return [
     { role: "system", content: system },
