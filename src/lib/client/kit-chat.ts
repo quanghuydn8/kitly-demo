@@ -4,7 +4,7 @@ import type { KitMessage, KitVersion } from "@/contract";
 
 /**
  * A chat line made in this page view without a saved turn: a follow-up swap pill re-prices with /api/kit/price
- * (no AI, no version), so the pill text + "⚙ Switched …" live only in the page. `createdAt` (demo clock) places it
+ * (no AI, no version), so the pill text + "⚙ Switched …" live only in the page. `createdAt` (wall clock, like saved turns) places it
  * among saved turns; missing = at the end.
  */
 export interface LocalTurn {
@@ -55,7 +55,7 @@ export function chatTurns(versions: KitVersion[], messages: KitMessage[], locals
  * the item ("KidZone Lite Backpack Grade 1–3" → "KidZone Lite"); the whole title when no word matches.
  */
 export function switchedText(itemKey: string, productTitle: string): string {
-  const item = itemKey.replace(/-/g, " ");
+  const item = itemKey.replace(/-/g, " ").toLowerCase();
   const itemWords = new Set(item.toLowerCase().split(" "));
   const words = productTitle.split(/\s+/);
   const cut = words.findIndex((w, i) => i > 0 && itemWords.has(w.toLowerCase()));

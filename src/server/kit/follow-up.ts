@@ -2,7 +2,9 @@
 // replies from the code-built SalesContext; a code GUARD rejects any number (≥ 1,000), voucher code or date that is
 // not in the context / option totals, a question without "?", or fewer than 2 usable suggestions, and falls back to the
 // code template of the first hook (vi/en). LLM error or > 8 s ⇒ template too. Never throws.
-// A suggestion the model ties to a cart interest (`interestItemKey`) gets the swap action from code.
+// A suggestion the model ties to a cart interest (`interestItemKey`) or to a basket line's alternative (`swapProductId`)
+// gets the swap action from code; a "switch to …" pill with no valid action is dropped (31/10: "Đổi hộp cơm sang loại
+// xịn hơn" only resent its words, the planner could not name a product, and the kit did not change).
 import { z } from "zod";
 import type { BasketOption, FollowUp, KitPlan, SalesContext, Voucher } from "@/contract";
 import { llmModels, type LLMClient, type LLMMessage } from "@/server/llm";
@@ -15,7 +17,7 @@ const MAX_SUGGESTION = 40;
 
 export const FollowUpOutputSchema = z.object({
   question: z.string(),
-  suggestions: z.array(z.object({ text: z.string(), interestItemKey: z.string().nullable() })),
+  suggestions: z.array(z.object({ text: z.string(), interestItemKey: z.string().nullable(), swapProductId: z.string().nullable() })),
 });
 export type FollowUpOutput = z.infer<typeof FollowUpOutputSchema>;
 
@@ -41,6 +43,7 @@ export function followUpMessages(input: FollowUpInput): LLMMessage[] {
     "Use ONLY facts from the JSON context and the kit totals: every number, price, voucher code, date and product name must come from there. Never invent any. Money format: 440.000₫.",
     `Then write 2–3 short suggestions (at most ${MAX_SUGGESTION} characters each), written as what the buyer would type next.`,
     "interestItemKey: the itemKey of a cart interest when the suggestion means switching to that cart product, else null. Clicking it switches the product, so its text must say switch (e.g. \"Switch to KidZone Lite\" / \"Đổi sang KidZone Lite\"), never just view.",
+    "swapProductId: the productId of one of the listed Alternatives when the suggestion means switching that kit line to it, else null. Clicking it switches the product, so its text must say switch. Never write a switch/upgrade suggestion without a swapProductId or interestItemKey: it would do nothing.",
     "The kit is already built from the buyer's message (see Kit lines below): never offer to search for or find products, and never repeat the buyer's request back as a question. Ask about one next step for THIS kit.",
   ].join("\n");
   const o = input.option;
@@ -50,12 +53,19 @@ export function followUpMessages(input: FollowUpInput): LLMMessage[] {
   // what the kit holds right now, so the question never offers to "find" something the kit already has (rehearsal 2)
   const lines = o ? o.lines.map((l) => `${l.product.title} (${l.itemKey})`).join("; ") || "none" : "none yet";
   const missing = o ? o.noMatch.map((n) => n.needLabel).join("; ") || "none" : "none yet";
+  const alternatives = o ? lineAlternatives(o, input.plan.budget) : [];
   const user = [
     `Buyer's last message: ${input.lastMessage}`,
     `Context (JSON): ${JSON.stringify(input.context)}`,
     totals,
     `Kit lines: ${lines}`,
     `No exact match in the store: ${missing}`,
+    `Alternatives (swappable): ${alternatives.length ? "" : "none"}`,
+    ...alternatives.map(
+      (a) =>
+        `- productId ${a.productId}: ${a.title}, ${formatVnd(a.price)}, instead of ${a.instead} (${a.itemKey}); ` +
+        `kit total after the swap about ${formatVnd(a.totalAfter)}${a.overBy ? `, over budget by ${formatVnd(a.overBy)}` : ""}`,
+    ),
     // the hook alone was not enough: seeing daysLeft 2 the model offered express again (rehearsal 2)
     ...(input.context.daysLeft !== null && input.context.daysLeft <= EXPRESS_DAYS
       ? [`Delivery is already express (deadline in ${input.context.daysLeft} days): do not offer express delivery again.`]
@@ -66,6 +76,27 @@ export function followUpMessages(input: FollowUpInput): LLMMessage[] {
     { role: "user", content: user },
   ];
 }
+
+/** Each basket line's alternatives with the code-computed kit total after swapping to it (before voucher changes). */
+function lineAlternatives(o: BasketOption, budget: number | null) {
+  return o.lines.flatMap((l) =>
+    l.alternatives.map((a) => {
+      const totalAfter = o.grandTotal + (a.product.price - l.product.price) * l.quantity;
+      return {
+        itemKey: l.itemKey,
+        productId: a.product.id,
+        title: a.product.title,
+        price: a.product.price,
+        instead: l.product.title,
+        totalAfter,
+        overBy: budget !== null && totalAfter > budget ? totalAfter - budget : 0,
+      };
+    }),
+  );
+}
+
+/** "Switch to …", "Swap …", "Upgrade …", "Đổi …", "Chuyển sang …": a pill that promises to change a product. */
+const SWITCH_WORDS = /^(switch|swap|upgrade|change|replace|đổi|chuyển sang|thay)\b/i;
 
 // ---------- guard ----------
 
@@ -133,6 +164,7 @@ function allowedFacts(input: FollowUpInput) {
     for (const s of o.savings) add(s.amount);
     for (const g of o.shops) [g.subtotal, g.shipping, g.shopDiscount].forEach(add);
     for (const l of o.lines) add(l.lineTotal);
+    for (const a of lineAlternatives(o, plan.budget)) [a.price, a.totalAfter, a.overBy].forEach(add);
   }
   const codes = new Set<string>([
     ...c.walletVouchers.map((v) => v.code),
@@ -148,6 +180,7 @@ function allowedFacts(input: FollowUpInput) {
     ...(o?.lines.map((l) => l.product.title) ?? []),
     ...(o?.noMatch.flatMap((n) => (n.closest ? [n.closest.candidate.product.title] : [])) ?? []),
     ...(o?.interests?.map((i) => i.candidate.product.title) ?? []),
+    ...(o?.lines.flatMap((l) => l.alternatives.map((a) => a.product.title)) ?? []),
   ].sort((a, b) => b.length - a.length);
   return { numbers, codes, knownCodes, dates, titles };
 }
@@ -182,25 +215,28 @@ function shorten(text: string, max: number): string {
 export function guardFollowUp(raw: FollowUpOutput, input: FollowUpInput): FollowUp | null {
   const question = raw.question.trim();
   if (!question.endsWith("?")) return null;
-  const interestKeys = new Set((input.option?.interests ?? []).map((i) => i.itemKey));
+  const interests = input.option?.interests ?? [];
+  const alternatives = input.option?.lines.flatMap((l) => l.alternatives.map((a) => ({ itemKey: l.itemKey, productId: a.product.id }))) ?? [];
+  const actionOf = (s: FollowUpOutput["suggestions"][number]) => {
+    const i = s.interestItemKey ? interests.find((x) => x.itemKey === s.interestItemKey) : undefined;
+    if (i) return { type: "swap" as const, itemKey: i.itemKey, productId: i.candidate.product.id };
+    const a = s.swapProductId ? alternatives.find((x) => x.productId === s.swapProductId) : undefined;
+    return a ? { type: "swap" as const, itemKey: a.itemKey, productId: a.productId } : undefined;
+  };
   const suggestions = raw.suggestions
-    .map((s) => ({ ...s, text: s.text.trim() }))
+    .map((s) => ({ text: s.text.trim(), action: actionOf(s) }))
+    // a pill that promises a switch must carry one, or clicking it only resends its words (31/10)
+    .filter((s) => s.action || !SWITCH_WORDS.test(s.text))
     // a swap pill names a product title, which can push it past the limit: shorten it instead of dropping it (rehearsal 2)
-    .map((s) => (s.interestItemKey && interestKeys.has(s.interestItemKey) ? { ...s, text: shorten(s.text, MAX_SUGGESTION) } : s))
+    .map((s) => (s.action ? { ...s, text: shorten(s.text, MAX_SUGGESTION) } : s))
     .filter((s) => s.text.length > 0 && s.text.length <= MAX_SUGGESTION)
     .slice(0, 3);
   if (suggestions.length < 2) return null;
   const facts = allowedFacts(input);
   if (![question, ...suggestions.map((s) => s.text)].every((t) => textIsGrounded(t, facts))) return null;
-  const interests = input.option?.interests ?? [];
   return {
     question,
-    suggestions: suggestions.map((s) => {
-      const i = s.interestItemKey ? interests.find((x) => x.itemKey === s.interestItemKey) : undefined;
-      return i
-        ? { text: s.text, action: { type: "swap" as const, itemKey: i.itemKey, productId: i.candidate.product.id } }
-        : { text: s.text };
-    }),
+    suggestions: suggestions.map((s) => (s.action ? { text: s.text, action: s.action } : { text: s.text })),
     source: "llm",
   };
 }

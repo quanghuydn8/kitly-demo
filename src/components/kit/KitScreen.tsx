@@ -59,6 +59,11 @@ function productTitle(v: KitVersion | undefined, productId: string): string {
   return productId;
 }
 
+/** What the buyer reads for an item: its plan label ("Hộp đựng cơm"), not the key slug ("hop-com"). */
+function itemLabel(v: KitVersion | undefined, itemKey: string): string {
+  return v?.plan.items.find((i) => i.key === itemKey)?.needLabel ?? itemKey;
+}
+
 /** Undo for the last price edit (Fit to budget, 💛 switch, follow-up swap); key = `${version}:${profile}`. */
 interface PriceUndo {
   key: string;
@@ -294,7 +299,7 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
   /** 💛 card: the cart product becomes the item's pick (D40). */
   const onSwitchInterest = (version: number, profile: Profile, itemKey: string, productId: string) => {
     const v = savedVersions.find((x) => x.version === version);
-    const text = `${switchedText(itemKey, productTitle(v, productId))}.`;
+    const text = `${switchedText(itemLabel(v, itemKey), productTitle(v, productId))}.`;
     price(version, withPick(selection, profile, itemKey, productId), { selection: before(profile), text });
   };
   /** Follow-up swap pill: no AI — the pill text as a user bubble, then a price call and "⚙ Switched … · Undo". */
@@ -304,8 +309,10 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
     if (!latest || !id) return;
     const profile: Profile = selection?.profile ?? "balanced";
     const turnId = `swap-${Date.now().toString(36)}`;
-    const systemText = switchedText(action.itemKey, productTitle(latest, action.productId));
-    setLocalTurns((t) => [...t, { id: turnId, threadId: id, createdAt: demoNow(demoToday), userText: text, systemText, undoable: true }]);
+    const systemText = switchedText(itemLabel(latest, action.itemKey), productTitle(latest, action.productId));
+    // Wall clock, like the saved turns (KitStore records time, not business dates): the demo clock (Sep 2) sorted this
+    // turn before every saved turn on the live site (31/10).
+    setLocalTurns((t) => [...t, { id: turnId, threadId: id, createdAt: new Date().toISOString(), userText: text, systemText, undoable: true }]);
     price(latest.version, withPick(selection, profile, action.itemKey, action.productId), { selection: before(profile), text: `${systemText}.`, turnId }, () =>
       setLocalTurns((t) => t.map((x) => (x.id === turnId ? { ...x, systemText: "That switch did not go through. Your kit is unchanged." } : x))),
     );

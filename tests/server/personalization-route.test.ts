@@ -27,7 +27,7 @@ function post(path: string, body: unknown, cookie = cookieFor()) {
 }
 const llmFollowUp = (question: string, suggestions: { text: string; interestItemKey?: string | null }[]) => ({
   question,
-  suggestions: suggestions.map((s) => ({ text: s.text, interestItemKey: s.interestItemKey ?? null })),
+  suggestions: suggestions.map((s) => ({ text: s.text, interestItemKey: s.interestItemKey ?? null, swapProductId: null })),
 });
 const GOOD_FOLLOWUP = llmFollowUp("The KidZone Lite from your cart is 440.000₫ with LAN-KZ80. Switch to it?", [
   { text: "Switch to KidZone Lite", interestItemKey: "backpack" },

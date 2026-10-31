@@ -7,6 +7,7 @@ import { findInterests } from "@/server/kit/interests";
 import { buildSalesContext } from "@/server/kit/sales-context";
 import { followUp, templateFollowUp, type FollowUpInput } from "@/server/kit/follow-up";
 import { heroWorld, TODAY } from "./support/personal";
+import { formatVnd } from "@/server/optimizer";
 
 async function heroInput(language: "en" | "vi" = "en"): Promise<FollowUpInput> {
   const w = await heroWorld("lan");
@@ -15,10 +16,15 @@ async function heroInput(language: "en" | "vi" = "en"): Promise<FollowUpInput> {
   const context = buildSalesContext(plan, option, w.persona, w.vouchers, TODAY, w.shops);
   return { plan, option, context, lastMessage: "My kid starts Grade 1.", vouchers: w.vouchers };
 }
-const llmOut = (question: string, suggestions: { text: string; interestItemKey?: string | null }[]) => ({
+const llmOut = (question: string, suggestions: { text: string; interestItemKey?: string | null; swapProductId?: string | null }[]) => ({
   question,
-  suggestions: suggestions.map((s) => ({ text: s.text, interestItemKey: s.interestItemKey ?? null })),
+  suggestions: suggestions.map((s) => ({ text: s.text, interestItemKey: s.interestItemKey ?? null, swapProductId: s.swapProductId ?? null })),
 });
+/** A basket line of the hero option that has an alternative (the lunch box in the seeded world). */
+const lineWithAlternative = (input: FollowUpInput) => {
+  const line = input.option!.lines.find((l) => l.alternatives.length > 0)!;
+  return { line, alt: line.alternatives[0] };
+};
 const run = (out: unknown, input: FollowUpInput, opts?: { timeoutMs?: number }) =>
   followUp(new FakeLLM({ structured: [out] }), input, opts);
 
@@ -190,6 +196,55 @@ describe("followUp: the guard (CONTRACT §1)", () => {
     const f = await followUp(slow, input, { timeoutMs: 30 });
     expect(f.source).toBe("template");
     expect(performance.now() - t0).toBeLessThan(150);
+  });
+});
+
+describe("followUp: swapping a basket line to one of its alternatives (31/10: 'Đổi hộp cơm sang loại xịn hơn' did nothing)", () => {
+  it("the prompt lists each line's alternatives with productId, price and the code-computed kit total after the swap", async () => {
+    const input = await heroInput();
+    const { line, alt } = lineWithAlternative(input);
+    const llm = new FakeLLM({ structured: [llmOut("Need express delivery?", [{ text: "Yes" }, { text: "No" }])] });
+    await followUp(llm, input);
+    const prompt = llm.calls[0].messages.map((m) => m.content).join("\n");
+    const after = input.option!.grandTotal + (alt.product.price - line.product.price) * line.quantity;
+    expect(prompt).toContain(alt.product.id);
+    expect(prompt).toContain(alt.product.title);
+    expect(prompt).toContain(formatVnd(alt.product.price));
+    expect(prompt).toContain(formatVnd(after));
+    expect(prompt).toMatch(/swapProductId/);
+  });
+
+  it("swapProductId of a line alternative ⇒ swap action on that line; its price and after-swap total are grounded", async () => {
+    const input = await heroInput();
+    const { line, alt } = lineWithAlternative(input);
+    const after = input.option!.grandTotal + (alt.product.price - line.product.price) * line.quantity;
+    const f = await run(
+      llmOut(`The kit becomes ${formatVnd(after)}: upgrade to ${alt.product.title} for ${formatVnd(alt.product.price)}?`, [
+        { text: "Switch to the better one", swapProductId: alt.product.id },
+        { text: "Keep my kit" },
+      ]),
+      input,
+    );
+    expect(f.source).toBe("llm");
+    expect(f.suggestions[0]).toEqual({ text: "Switch to the better one", action: { type: "swap", itemKey: line.itemKey, productId: alt.product.id } });
+    expect(FollowUpSchema.parse(f)).toEqual(f);
+  });
+
+  it("a switch pill without a valid swap action is dropped (it would only resend its words); < 2 left ⇒ template", async () => {
+    const input = await heroInput("vi");
+    const f = await run(
+      llmOut("Bạn muốn đổi hộp cơm không?", [
+        { text: "Đổi hộp cơm sang loại xịn hơn" },
+        { text: "Đổi sang loại khác", swapProductId: "prod-does-not-exist" },
+        { text: "Giữ nguyên bộ này" },
+        { text: "Thêm vào giỏ" },
+      ]),
+      input,
+    );
+    expect(f.source).toBe("llm");
+    expect(f.suggestions.map((s) => s.text)).toEqual(["Giữ nguyên bộ này", "Thêm vào giỏ"]);
+    const only = await run(llmOut("Switch the lunch box?", [{ text: "Switch to a fancier one" }, { text: "Keep" }]), await heroInput());
+    expect(only.source).toBe("template");
   });
 });
 
