@@ -114,9 +114,12 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
   );
 
   const loadThread = useCallback(
-    async (id: string): Promise<boolean> => {
+    /** `forRun`: the run whose `done` asked for this read-back; if the buyer has started another run since, the
+     *  result is stale and must not clear that newer run (its user bubble would vanish until its first event). */
+    async (id: string, forRun?: AbortController): Promise<boolean> => {
       try {
         const t = await api.getThread(id);
+        if (forRun && abortRef.current !== forRun) return true;
         if (!t) {
           setLoad("notfound");
           return false;
@@ -157,7 +160,7 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
           const v = current.version;
           if (v !== null && summary) setSummaries((s) => ({ ...s, [v]: summary }));
           setThreadId(e.data.threadId);
-          void loadThread(e.data.threadId).then((ok) => {
+          void loadThread(e.data.threadId, controller).then((ok) => {
             // Keep showing the finished run if the saved thread cannot be read back.
             if (!ok) setLoad("idle");
           });

@@ -301,7 +301,7 @@ test("After the demo: Undo the listing fix so the next run starts clean", async 
   expect(backpackGap(await insights())?.appliedFix ?? null).toBeNull();
 });
 
-test("Guest (D43): the Beat 1 sentence has no 💛 card, no wallet line and a higher Balanced total; back to Lan", async () => {
+test("Guest (D43): the Beat 1 sentence has no 💛 card, no wallet line, no Deliver to; back to Lan", async () => {
   await page.goto("/kit/new");
   await switchPersona("Guest");
   await page.keyboard.press("Escape");
@@ -313,7 +313,7 @@ test("Guest (D43): the Beat 1 sentence has no 💛 card, no wallet line and a hi
   await expect(kit().getByRole("region", { name: "In your cart" })).toHaveCount(0);
   await expect(kit().getByRole("region", { name: "Totals" })).not.toContainText("Your wallet voucher");
   await expect(kit().locator("header").first()).not.toContainText("Deliver to");
-  expect(await grandTotal()).toBeGreaterThan(lanBalanced);
+  // No total comparison (Huy 31/10, L15 option B): each new kit re-plans, Guest came out cheaper in 2/7 runs.
 
   await switchPersona("Lan");
   const persona = (await (await page.request.get("/api/persona")).json()) as PersonaResponse;
