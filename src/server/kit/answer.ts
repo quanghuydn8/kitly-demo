@@ -71,6 +71,7 @@ export function answerMessages(input: AnswerInput): LLMMessage[] {
     `You are Kitly, a shopping assistant. Answer the buyer's question about their kit in ${lang}. Plain text, no markdown.`,
     `Hard limit: at most ${ANSWER_MAX_WORDS} words. Be direct and honest: if a product lacks something (a tag), say so and what the description says.`,
     "Use only the facts below (products, kit, sales context); never invent products, prices, dates or specs. Money format: 440.000₫.",
+    "When the buyer asks for a better, cheaper or different product, name the listed alternatives (title, price, how the item total changes, arrival); say there is none only when no alternative is listed for that item.",
     "Do not ask a follow-up question (one is added separately). Do not change the kit.",
   ].join("\n");
   const facts: string[] = [`Buyer question: ${message}`, "Products:", ...productsForQuestion(message, plan, option).map(productFacts)];
@@ -80,6 +81,25 @@ export function answerMessages(input: AnswerInput): LLMMessage[] {
       ...option.lines.map((l) => `- ${plan.items.find((i) => i.key === l.itemKey)?.needLabel ?? l.itemKey}: ${l.product.title}, ${formatVnd(l.lineTotal)}`),
     );
     for (const n of option.noMatch) facts.push(`- ${n.needLabel}: no exact match`);
+    // The alternatives the panel shows under the asked-about lines (31/10: without them the model said a fancier
+    // lunch box did not exist while the panel listed one).
+    const asked = new Set(productsForQuestion(message, plan, option).map((k) => k.itemKey));
+    for (const l of option.lines) {
+      if (!asked.has(l.itemKey) || l.alternatives.length === 0) continue;
+      const label = plan.items.find((i) => i.key === l.itemKey)?.needLabel ?? l.itemKey;
+      facts.push(`Alternatives for ${label} (instead of ${l.product.title}, ${formatVnd(l.product.price)}):`);
+      for (const a of l.alternatives) {
+        const delta = (a.product.price - l.product.price) * l.quantity;
+        // Code does the maths (the model added its own total and missed that it broke the budget).
+        const after = option.grandTotal + delta;
+        const over = plan.budget !== null && after > plan.budget ? `, over budget by ${formatVnd(after - plan.budget)}` : "";
+        facts.push(
+          `- ${a.product.title} (${a.shop.name}): price ${formatVnd(a.product.price)}, rating ${a.product.rating}, ` +
+            `arrives ${a.arrivesBy}; swapping makes the kit about ${formatVnd(after)} ` +
+            `(${delta >= 0 ? "+" : "−"}${formatVnd(Math.abs(delta))}, vouchers may change it)${over}`,
+        );
+      }
+    }
   } else {
     facts.push("Kit: no basket yet (waiting for a budget)");
   }

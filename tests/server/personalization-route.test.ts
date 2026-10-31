@@ -11,6 +11,7 @@ import { POST as adjust } from "@/app/api/kit/adjust/route";
 import { GET as getThread } from "@/app/api/threads/[id]/route";
 import { getAdapter } from "@/server/adapter";
 import { getKitStore } from "@/server/kitstore";
+import { formatVnd } from "@/server/optimizer";
 import { FakeLLM, fakeDelay, setLLM } from "@/server/llm";
 import { HERO, refineOutput, sloppyHeroPlan } from "./support/plans";
 import { dataOf, eventNames, sseEvents } from "./support/sse";
@@ -256,6 +257,22 @@ describe("S10: answer turns (D42)", () => {
       expect(prompt).toContain('"daysLeft":3');
     } finally {
       vi.unstubAllEnvs();
+    }
+  });
+
+  it("a question about an item sees that line's alternatives (31/10: 'a fancier lunch box?' → 'none in the catalog' while the panel showed one)", async () => {
+    const { threadId } = await heroKit({ persona: "lan", followUp: GOOD_FOLLOWUP });
+    const v1 = (await getKitStore().getThread(threadId, OWNER))!.versions[0];
+    const line = v1.options.find((o) => o.profile === "balanced")!.lines.find((l) => l.itemKey === "lunch-box")!;
+    expect(line.alternatives.length).toBeGreaterThan(0);
+    const llm = new FakeLLM({ structured: [refineOutput(sloppyHeroPlan(), "answer"), GOOD_FOLLOWUP], stream: ANSWER });
+    setLLM(llm);
+    await sseEvents(await refine(post("/api/kit/refine", { threadId, message: "Is there a fancier lunch box?" })));
+    const prompt = llm.calls.find((c) => c.kind === "stream")!.messages.map((m) => m.content).join("\n");
+    for (const a of line.alternatives) {
+      expect(prompt).toContain(a.product.title);
+      expect(prompt).toContain(formatVnd(a.product.price));
+      expect(prompt).toContain(`swapping makes the kit about ${formatVnd(v1.options.find((o) => o.profile === "balanced")!.grandTotal + (a.product.price - line.product.price) * line.quantity)}`);
     }
   });
 
