@@ -9,6 +9,9 @@ import type { KitApi } from "@/lib/client/kit-api";
 
 const [hero] = ThreadsSampleSchema.parse(threadsJson);
 const threadId = hero.thread.id;
+/** Before the answer turn: no saved messages. The late read-back returns the thread with the answer saved. */
+const beforeAnswer = { ...hero, messages: [] };
+const savedAnswer = hero.messages[0];
 
 let resolveLateRead: (() => void) | null = null;
 let getThreadCalls = 0;
@@ -17,7 +20,7 @@ const fakeApi = {
   listThreads: async () => [],
   getThread: () => {
     getThreadCalls += 1;
-    if (getThreadCalls === 1) return Promise.resolve(hero);
+    if (getThreadCalls === 1) return Promise.resolve(beforeAnswer);
     // The answer turn's read-back: held until the test releases it.
     return new Promise((resolve) => {
       resolveLateRead = () => resolve(hero);
@@ -60,7 +63,10 @@ describe("KitScreen run vs late thread read-back", () => {
     await act(async () => {
       resolveLateRead?.();
     });
-    expect(screen.getAllByTestId("user-bubble").length).toBe(saved + 1);
+    // The newer run is still on screen…
     expect(screen.getAllByText("Drop the raincoat too, please.").length).toBe(1);
+    // …and the late read-back was still applied (a new kit has nothing else to show its earlier turns from).
+    expect(screen.getByText(savedAnswer.answer)).toBeTruthy();
+    expect(screen.getAllByTestId("user-bubble").length).toBe(saved + 2);
   });
 });

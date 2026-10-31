@@ -114,18 +114,21 @@ export function KitScreen({ threadId: initialThreadId, initialQuery, demoToday }
   );
 
   const loadThread = useCallback(
-    /** `forRun`: the run whose `done` asked for this read-back; if the buyer has started another run since, the
-     *  result is stale and must not clear that newer run (its user bubble would vanish until its first event). */
+    /** `forRun`: the run whose `done` asked for this read-back. If the buyer has started another run since, the
+     *  saved thread is still applied (a new kit has nothing else to show its earlier turns from), but the newer
+     *  run is kept — clearing it made its user bubble vanish until its first stream event. */
     async (id: string, forRun?: AbortController): Promise<boolean> => {
       try {
         const t = await api.getThread(id);
-        if (forRun && abortRef.current !== forRun) return true;
+        const newerRun = !!forRun && abortRef.current !== forRun;
         if (!t) {
+          if (newerRun) return false;
           setLoad("notfound");
           return false;
         }
         setThread(t);
         setLoad("idle");
+        if (newerRun) return true;
         setRun(null);
         restoreSelection(id, t.versions[t.versions.length - 1]);
         return true;
